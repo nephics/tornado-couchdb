@@ -6,7 +6,7 @@ class BlockingCouch(object):
 
     def __init__(self, db_name, host='localhost', port=5984):
         self.couch_url = 'http://{0}:{1}'.format(host, port)
-        self.client = httpclient.HTTPClient(max_simultaneous_connections=25)
+        self.client = httpclient.HTTPClient()
         self.db_name = db_name
 
     # Database operations
@@ -230,7 +230,7 @@ class AsyncCouch(object):
     '''Basic wrapper class for asynchronous operations on a CouchDB'''
     def __init__(self, db_name, host='localhost', port=5984):
         self.couch_url = 'http://{0}:{1}'.format(host, port)
-        self.client = httpclient.AsyncHTTPClient2(max_simultaneous_connections=25)
+        self.client = httpclient.AsyncHTTPClient()
         self.db_name = db_name
 
     # Database operations
