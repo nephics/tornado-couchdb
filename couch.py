@@ -130,6 +130,61 @@ class BlockingCouch(object):
         return self._http_delete(url)
 
     def view(self, design_doc_name, view_name, **kwargs):
+        '''Query a pre-defined view in the specified design doc.
+        The following query parameters can be specified as keyword arguments.
+
+        Limit query results to those with the specified key
+          key=<key-value>
+          
+        Limit query results to those following the specified startkey
+          startkey=<key-value>
+          
+        First document id to include in the output
+          startkey_docid=<document id>
+          
+        Limit query results to those previous to the specified endkey
+          endkey=<key-value>
+          
+        Last document id to include in the output
+          endkey_docid=<document id>
+          
+        Limit the number of documents in the output
+          limit=<number of docs>
+          
+        If stale=ok is set CouchDB will not refresh the view even if it is stalled.
+          stale=ok
+          
+        Reverse the output (default is false). Note that the descending option is
+        applied before any key filtering, so you may need to swap the values of the
+        startkey and endkey options to get the expected results.
+          descending=true
+          descending=false
+          
+        Skip the specified number of docs in the query results:
+          skip=<number>
+          
+        The group option controls whether the reduce function reduces to a set of
+        distinct keys or to a single result row:
+          group=true
+          group=false
+        
+          group_level=<number>
+          
+        
+        Use the reduce function of the view. It defaults to true, if a reduce
+        function is defined and to false otherwise.
+          reduce=true
+          reduce=false
+        
+        Automatically fetch and include the document which emitted each view
+        entry (default is false).
+          include_docs=true
+          include_docs=false
+        
+        Controls whether the endkey is included in the result. It defaults to true.
+          inclusive_end=true
+          inclusive_end=false
+        '''
         body = None
         options = []
         if kwargs:
@@ -363,6 +418,61 @@ class AsyncCouch(object):
             self._http_delete(url, callback=callback)
 
     def view(self, design_doc_name, view_name, callback=None, **kwargs):
+        '''Query a pre-defined view in the specified design doc.
+        The following query parameters can be specified as keyword arguments.
+
+        Limit query results to those with the specified key
+          key=<key-value>
+          
+        Limit query results to those following the specified startkey
+          startkey=<key-value>
+          
+        First document id to include in the output
+          startkey_docid=<document id>
+          
+        Limit query results to those previous to the specified endkey
+          endkey=<key-value>
+          
+        Last document id to include in the output
+          endkey_docid=<document id>
+          
+        Limit the number of documents in the output
+          limit=<number of docs>
+          
+        If stale=ok is set CouchDB will not refresh the view even if it is stalled.
+          stale=ok
+          
+        Reverse the output (default is false). Note that the descending option is
+        applied before any key filtering, so you may need to swap the values of the
+        startkey and endkey options to get the expected results.
+          descending=true
+          descending=false
+          
+        Skip the specified number of docs in the query results:
+          skip=<number>
+          
+        The group option controls whether the reduce function reduces to a set of
+        distinct keys or to a single result row:
+          group=true
+          group=false
+        
+          group_level=<number>
+          
+        
+        Use the reduce function of the view. It defaults to true, if a reduce
+        function is defined and to false otherwise.
+          reduce=true
+          reduce=false
+        
+        Automatically fetch and include the document which emitted each view
+        entry (default is false).
+          include_docs=true
+          include_docs=false
+        
+        Controls whether the endkey is included in the result. It defaults to true.
+          inclusive_end=true
+          inclusive_end=false
+        '''
         body = None
         options = []
         if kwargs:
