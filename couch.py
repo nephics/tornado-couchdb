@@ -133,8 +133,9 @@ class BlockingCouch(object):
         '''Query a pre-defined view in the specified design doc.
         The following query parameters can be specified as keyword arguments.
 
-        Limit query results to those with the specified key
+        Limit query results to those with the specified key or list of keys
           key=<key-value>
+          keys=<list of keys>
           
         Limit query results to those following the specified startkey
           startkey=<key-value>
@@ -421,8 +422,9 @@ class AsyncCouch(object):
         '''Query a pre-defined view in the specified design doc.
         The following query parameters can be specified as keyword arguments.
 
-        Limit query results to those with the specified key
+        Limit query results to those with the specified key or list of keys
           key=<key-value>
+          keys=<list of keys>
           
         Limit query results to those following the specified startkey
           startkey=<key-value>
