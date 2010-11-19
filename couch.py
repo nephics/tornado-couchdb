@@ -12,28 +12,33 @@ class BlockingCouch(object):
     # Database operations
 
     def create_db(self):
-        '''Creates the database on the server'''
+        '''Creates the database'''
         return self._http_put(''.join(['/', self.db_name, '/']), '')
 
     def delete_db(self):
-        '''Deletes the database on the server'''
+        '''Deletes the database'''
         return self._http_delete(''.join(['/', self.db_name, '/']))
 
     def list_dbs(self):
-        '''List the databases on the server'''
+        '''List the databases'''
         return self._http_get('/_all_dbs')
 
     def info_db(self):
         '''Returns info about the database'''
         return self._http_get(''.join(['/', self.db_name, '/']))
         
+    def pull_db(self, source, create_target=False):
+        '''Replicate from a source database to current (target) db'''
+        body = json_encode({'source': source, 'target': self.db_name, 'create_target': create_target})
+        return self._http_post('/_replicate', body)
+
     def uuids(self, count=1):
         if count > 1:
             q = ''.join(['?count=', str(count)])
         else:
             q = ''
         return self._http_get(''.join(['/_uuids', q]))['uuids']
-
+        
     # Document operations
     
     def list_docs(self):
@@ -292,20 +297,25 @@ class AsyncCouch(object):
     # Database operations
 
     def create_db(self, callback=None):
-        '''Creates a new database on the server'''
+        '''Creates a new database'''
         self._http_put(''.join(['/', self.db_name, '/']), '', callback=callback)
 
     def delete_db(self, callback=None):
-        '''Deletes the database on the server'''
+        '''Deletes the database'''
         self._http_delete(''.join(['/', self.db_name, '/']), callback=callback)
 
     def list_dbs(self, callback=None):
-        '''List the databases on the server'''
+        '''List the databases'''
         self._http_get('/_all_dbs', callback=callback)
 
     def info_db(self, callback=None):
         '''Returns info about the database'''
         self._http_get(''.join(['/', self.db_name, '/']), callback=callback)
+
+    def pull_db(self, source, create_target=False):
+        '''Replicate from a source database to current (target) db'''
+        body = json_encode({'source': source, 'target': self.db_name, 'create_target': create_target})
+        return self._http_post('/_replicate', body, callback=callback)
 
     def uuids(self, count=1, callback=None):
         def got_uuids(result):
