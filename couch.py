@@ -24,13 +24,13 @@ class BlockingCouch(object):
         return self._http_get('/_all_dbs')
 
     def info_db(self):
-        '''Returns info about the database'''
+        '''Get info about the database'''
         return self._http_get(''.join(['/', self.db_name, '/']))
         
     def pull_db(self, source, create_target=False):
-        '''Replicate from a source database to current (target) db'''
+        '''Replicate changes from a source database to current (target) db'''
         body = json_encode({'source': source, 'target': self.db_name, 'create_target': create_target})
-        return self._http_post('/_replicate', body)
+        return self._http_post('/_replicate', body, connect_timeout=120.0, request_timeout=120.0)
 
     def uuids(self, count=1):
         if count > 1:
@@ -176,7 +176,6 @@ class BlockingCouch(object):
         
           group_level=<number>
           
-        
         Use the reduce function of the view. It defaults to true, if a reduce
         function is defined and to false otherwise.
           reduce=true
@@ -247,12 +246,12 @@ class BlockingCouch(object):
 
         return self._parse_response(resp, decode=decode)
 
-    def _http_post(self, uri, body, doc=None):
+    def _http_post(self, uri, body, doc=None, **kwargs):
         headers = {'Accept': 'application/json',
                    'Content-Type': 'application/json'}
         r = httpclient.HTTPRequest(self.couch_url + uri, method='POST',
-                                   headers=headers,
-                                   body=body, use_gzip=False)
+                                   headers=headers, body=body,
+                                   use_gzip=False, **kwargs)
         try:
             resp = self.client.fetch(r)
         except httpclient.HTTPError, e:
@@ -309,22 +308,21 @@ class AsyncCouch(object):
         self._http_get('/_all_dbs', callback=callback)
 
     def info_db(self, callback=None):
-        '''Returns info about the database'''
+        '''Get info about the database'''
         self._http_get(''.join(['/', self.db_name, '/']), callback=callback)
 
-    def pull_db(self, source, create_target=False):
-        '''Replicate from a source database to current (target) db'''
+    def pull_db(self, source, callback=None, create_target=False):
+        '''Replicate changes from a source database to current (target) db'''
         body = json_encode({'source': source, 'target': self.db_name, 'create_target': create_target})
-        return self._http_post('/_replicate', body, callback=callback)
+        self._http_post('/_replicate', body, callback=callback, connect_timeout=120.0, request_timeout=120.0)
 
     def uuids(self, count=1, callback=None):
         def got_uuids(result):
-            if not callback:
-                return 
-            if isinstance(result, Exception):
-                callback(result)
-            else:
-                callback(result['uuids'])
+            if callback:
+                if isinstance(result, Exception):
+                    callback(result)
+                else:
+                    callback(result['uuids'])
         if count > 1:
             q = ''.join(['?count=', str(count)])
         else:
@@ -470,7 +468,6 @@ class AsyncCouch(object):
         
           group_level=<number>
           
-        
         Use the reduce function of the view. It defaults to true, if a reduce
         function is defined and to false otherwise.
           reduce=true
@@ -548,12 +545,12 @@ class AsyncCouch(object):
         cb = lambda resp: self._http_callback(resp, callback, decode=decode)
         self.client.fetch(r, cb)
 
-    def _http_post(self, uri, body, doc=None, callback=None):
+    def _http_post(self, uri, body, doc=None, callback=None, **kwargs):
         headers = {'Accept': 'application/json',
                    'Content-Type': 'application/json'}
         r = httpclient.HTTPRequest(self.couch_url + uri, method='POST',
-                                   headers=headers,
-                                   body=body, use_gzip=False)
+                                   headers=headers, body=body,
+                                   use_gzip=False, **kwargs)
         self.client.fetch(r, lambda resp: self._http_callback(resp, callback,
                                                               doc=doc))
 
