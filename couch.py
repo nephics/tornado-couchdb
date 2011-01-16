@@ -1,6 +1,8 @@
 from tornado import httpclient
 from tornado.escape import json_decode, json_encode, url_escape
 
+
+
 class BlockingCouch(object):
     '''Basic wrapper class for blocking operations on a CouchDB'''
 
@@ -9,132 +11,145 @@ class BlockingCouch(object):
         self.client = httpclient.HTTPClient()
         self.db_name = db_name
 
-    # Database operations
 
-    def create_db(self):
-        '''Creates the database'''
-        return self._http_put(''.join(['/', self.db_name, '/']), '')
+   # Database operations
 
-    def delete_db(self):
-        '''Deletes the database'''
-        return self._http_delete(''.join(['/', self.db_name, '/']))
+    def create_db(self, raise_error=True):
+        '''Creates database'''
+        return self._http_put(''.join(['/', self.db_name, '/']), raise_error=raise_error)
 
-    def list_dbs(self):
-        '''List the databases'''
-        return self._http_get('/_all_dbs')
+    def delete_db(self, raise_error=True):
+        '''Deletes database'''
+        return self._http_delete(''.join(['/', self.db_name, '/']), raise_error=raise_error)
 
-    def info_db(self):
+    def list_dbs(self, raise_error=True):
+        '''List names of databases'''
+        return self._http_get('/_all_dbs', raise_error=raise_error)
+
+    def info_db(self, raise_error=True):
         '''Get info about the database'''
-        return self._http_get(''.join(['/', self.db_name, '/']))
-        
-    def pull_db(self, source, create_target=False):
-        '''Replicate changes from a source database to current (target) db'''
+        return self._http_get(''.join(['/', self.db_name, '/']), raise_error=raise_error)
+
+    def pull_db(self, source, create_target=False, raise_error=True):
+        '''Replicate changes from a source database to current (target) database'''
         body = json_encode({'source': source, 'target': self.db_name, 'create_target': create_target})
-        return self._http_post('/_replicate', body, connect_timeout=120.0, request_timeout=120.0)
+        return self._http_post('/_replicate', body, raise_error=raise_error, connect_timeout=120.0, request_timeout=120.0)
 
     def uuids(self, count=1):
+        '''Get one or more uuids'''
         if count > 1:
-            q = ''.join(['?count=', str(count)])
+            url = ''.join(['/_uuids?count=', str(count)])
         else:
-            q = ''
-        return self._http_get(''.join(['/_uuids', q]))['uuids']
-        
+            url = '/_uuids'
+        return self._http_get(url)['uuids']
+
+
     # Document operations
     
-    def list_docs(self):
-        '''List all documents in a given database'''
-        return self._http_get(''.join(['/', self.db_name, '/_all_docs']))
+    def list_docs(self, raise_error=True):
+        '''Get dict with id and rev of all documents in the database.'''
+        resp = self._http_get(''.join(['/', self.db_name, '/_all_docs']), raise_error=raise_error)
+        return dict((row['id'], row['value']['rev']) for row in resp['rows'])
 
-    def get_doc(self, doc_id):
-        '''Open a document with the given id'''
+    def get_doc(self, doc_id, raise_error=True):
+        '''Get document with the given id.'''
         url = ''.join(['/', self.db_name, '/', url_escape(doc_id)])
-        return self._http_get(url)
+        return self._http_get(url, raise_error=raise_error)
 
-    def get_docs(self, doc_ids):
+    def get_docs(self, doc_ids, raise_error=True):
         '''Get multiple documents with the given id's'''
         url = ''.join(['/', self.db_name, '/_all_docs?include_docs=true'])
         body = json_encode({'keys': doc_ids})
-        return self._http_post(url, body)
-        
-    def save_doc(self, doc):
-        '''Save/create a document to/in a given database. On success, a copy of
-        the doc is returned with updated _id and _rev keys set.'''
+        resp = self._http_post(url, body, raise_error=raise_error)
+        return [row['doc'] if 'doc' in row else row for row in resp['rows']]
+
+    def save_doc(self, doc, raise_error=True):
+        '''Save/create a document in the database. Returns a dict with id
+           and rev of the saved doc.'''
         body = json_encode(doc)
         if '_rev' in doc:
+            # update an existing document
             url = ''.join(['/', self.db_name, '/', url_escape(doc['_id'])])
-            return self._http_put(url, body, doc=doc)
+            return self._http_put(url, body, doc=doc, raise_error=raise_error)
         else:
+            # save a new document
             url = ''.join(['/', self.db_name])
-            return self._http_post(url, body, doc=doc)
+            return self._http_post(url, body, doc=doc, raise_error=raise_error)
 
-    def save_docs(self, docs, all_or_nothing=False):
-        '''Save/create multiple documents'''
+    def save_docs(self, docs, all_or_nothing=False, raise_error=True):
+        '''Save/create multiple documents. Returns a list of dicts with id
+           and rev of the saved docs.'''
         # use bulk docs API to update the docs
         url = ''.join(['/', self.db_name, '/_bulk_docs'])
         body = json_encode({'all_or_nothing': all_or_nothing, 'docs': docs})
-        return self._http_post(url, body)
-
-    def delete_doc(self, doc):
+        return self._http_post(url, body, raise_error=raise_error)
+        
+    def delete_doc(self, doc, raise_error=True):
         '''Delete a document'''
         if '_rev' not in doc or '_id' not in doc:
             raise KeyError('No id or revision information in doc')
         url = ''.join(['/', self.db_name, '/', url_escape(doc['_id']), '?rev=', doc['_rev']])
-        return self._http_delete(url)
+        return self._http_delete(url, raise_error=raise_error)
 
-    def delete_docs(self, docs, all_or_nothing=False):
+    def delete_docs(self, docs, all_or_nothing=False, raise_error=True):
         '''Delete multiple documents'''
         if any('_rev' not in doc or '_id' not in doc for doc in docs):
             raise KeyError('No id or revision information in one or more docs')
         # mark docs as deleted
-        map(lambda doc: doc.update({'_deleted': True}), docs)
+        deleted = {'_deleted': True}
+        [doc.update(deleted) for doc in docs]
         # use bulk docs API to update the docs
         url = ''.join(['/', self.db_name, '/_bulk_docs'])
         body = json_encode({'all_or_nothing': all_or_nothing, 'docs': docs})
-        return self._http_post(url, body)
-        
-    def get_attachment(self, doc, attachment_name):
-        '''Open a document attachment'''
+        return self._http_post(url, body, raise_error=raise_error)
+
+    def get_attachment(self, doc, attachment_name, mimetype=None, raise_error=True):
+        '''Open a document attachment. The doc should at least contain an _id key.
+           If mimetype is not specified, the doc shall contain _attachments key with
+           info about the named attachment.'''
         if '_id' not in doc:
             raise ValueError('Missing key named _id in doc')
-        if '_attachments' not in doc or attachment_name not in doc['_attachments']:
-            raise ValueError('Document does not have an attachment with the '
-                             'specified name')
+        if not mimetype:
+            # get mimetype from the doc
+            if '_attachments' not in doc:
+                raise ValueError('No attachments in doc, cannot get content type of attachment')
+            elif attachment_name not in doc['_attachments']:
+                raise ValueError('Document does not have an attachment by the given name')
+            else:
+                mimetype = doc['_attachments'][attachment_name]['content_type']
         url = ''.join(['/', self.db_name, '/', url_escape(doc['_id']), '/',
                        url_escape(attachment_name)])
-        headers = {'Accept': doc['_attachments'][attachment_name]['content_type']}
-        return self._http_get(url, headers=headers)
+        headers = {'Accept': mimetype}
+        return self._http_get(url, headers=headers, raise_error=raise_error)
 
-    def save_attachment(self, doc, attachment):
-        '''Save an attachment to the specified doc. The attatchment shall be
+    def save_attachment(self, doc, attachment, raise_error=True):
+        '''Save an attachment to the specified doc. The attachment shall be
         a dict with keys: mimetype, name, data. The doc shall be a dict, at
         least having the key _id, and if doc is existing in the database,
         it shall also contain the key _rev'''
-
         if any(key not in attachment for key in ['mimetype', 'name', 'data']):
             raise KeyError('Attachment dict is missing one or more required keys')
-
         if '_rev' in doc:
             q = ''.join(['?rev=', doc['_rev']])
         else:
             q = ''
-
         url = ''.join(['/', self.db_name, '/', url_escape(doc['_id']), '/',
                        url_escape(attachment['name']), q])
         headers = {'Content-Type': attachment['mimetype']}
+        body = attachment['data']
+        return self._http_put(url, body, headers=headers, raise_error=raise_error)
 
-        return self._http_put(url, body=attachment['data'], headers=headers)
-
-    def delete_attachment(self, doc, attachment_name):
+    def delete_attachment(self, doc, attachment_name, raise_error=True):
+        '''Delete an attachment to the specified doc. The attatchment shall be
+           a dict with keys: mimetype, name, data. The doc shall be a dict, at
+           least with the keys: _id and _rev'''
         if '_rev' not in doc or '_id' not in doc:
             raise KeyError('No id or revision information in doc')
-        if '_attachments' not in doc or attachment_name not in doc['_attachments']:
-            raise ValueError('Document does not have an attachment with the '
-                             'specified name')
         url = ''.join(['/', self.db_name, '/', url_escape(doc['_id']), '/',
                        attachment_name, '?rev=', doc['_rev']])
-        return self._http_delete(url)
+        return self._http_delete(url, raise_error=raise_error)
 
-    def view(self, design_doc_name, view_name, **kwargs):
+    def view(self, design_doc_name, view_name, raise_error=True, **kwargs):
         '''Query a pre-defined view in the specified design doc.
         The following query parameters can be specified as keyword arguments.
 
@@ -205,93 +220,93 @@ class BlockingCouch(object):
             q = ''
         url = ''.join(['/', self.db_name, '/_design/', design_doc_name, '/_view/', view_name, q])
         if body:
-            return self._http_post(url, body)
+            return self._http_post(url, body, raise_error=raise_error)
         else:
-            return self._http_get(url)
-        
-    # Basic http methods
+            return self._http_get(url, raise_error=raise_error)
 
-    def _parse_response(self, resp, decode=True, doc=None):
-        if decode:
-            # decode the JSON body before returning result
-            obj = json_decode(resp.body)
+
+    # Basic http methods and utility functions
+
+    def _parse_response(self, resp, raise_error=True):
+        # the JSON body and check for errors
+        obj = json_decode(resp.body)
+        if raise_error:
             if 'error' in obj:
                 raise relax_exception(httpclient.HTTPError(resp.code, obj['reason'], resp))
-            if doc:
-                # modify doc _id and _rev keys according to the response
-                new_doc = dict(doc)
-                new_doc.update({'_id': obj['id'], '_rev': obj['rev']})
-                return new_doc
+            elif isinstance(obj, list):
+                # check if there is an error in the list of dicts, raise the first error seen
+                for item in obj:
+                    if 'error' in item:
+                        raise relax_exception(httpclient.HTTPError(resp.code, item['reason'], resp))
+            elif 'rows' in obj:
+                # check if there is an error in the result rows, raise the first error seen
+                for row in obj['rows']:
+                    if 'error' in row:
+                        raise relax_exception(httpclient.HTTPError(resp.code, row['error'], resp))
+        return obj
+
+    def _fetch(self, request, raise_error, decode=True):
+        try:
+            resp = self.client.fetch(request)
+        except httpclient.HTTPError as e:
+            if raise_error:
+                raise relax_exception(e)
             else:
-                return obj
+                return json_decode(e.response.body)
+
+        if decode:
+            return self._parse_response(resp, raise_error)
         else:
-            # return the response body
             return resp.body
 
-    def _http_get(self, uri, headers=None):
+    def _http_get(self, uri, headers=None, raise_error=True):
         if not isinstance(headers, dict):
             headers = {}
         if 'Accept' not in headers:
             headers['Accept'] = 'application/json'
             decode = True
         else:
-            # user callback shall take perform decoding, as
+            # not a JSON response, don't try to decode 
             decode = False
         r = httpclient.HTTPRequest(self.couch_url + uri, method='GET',
                                    headers=headers, use_gzip=False)
-        try:
-            resp = self.client.fetch(r)
-        except httpclient.HTTPError, e:
-            raise relax_exception(e)
+        return self._fetch(r, raise_error, decode)
 
-        return self._parse_response(resp, decode=decode)
-
-    def _http_post(self, uri, body, doc=None, **kwargs):
+    def _http_post(self, uri, body, doc=None, raise_error=True, **kwargs):
         headers = {'Accept': 'application/json',
                    'Content-Type': 'application/json'}
         r = httpclient.HTTPRequest(self.couch_url + uri, method='POST',
                                    headers=headers, body=body,
                                    use_gzip=False, **kwargs)
-        try:
-            resp = self.client.fetch(r)
-        except httpclient.HTTPError, e:
-            raise relax_exception(e)
+        return self._fetch(r, raise_error)
 
-        return self._parse_response(resp, doc=doc)
-
-    def _http_put(self, uri, body, headers=None, doc=None):
+    def _http_put(self, uri, body='', headers=None, doc=None, raise_error=True):
         if not isinstance(headers, dict):
             headers = {}
-        if 'Content-Type' not in headers and len(body) > 0:
+        if body and 'Content-Type' not in headers:
             headers['Content-Type'] = 'application/json'
         if 'Accept' not in headers:
             headers['Accept'] = 'application/json'
         r = httpclient.HTTPRequest(self.couch_url + uri, method='PUT',
                                    headers=headers, body=body, use_gzip=False)
-        try:
-            resp = self.client.fetch(r)
-        except httpclient.HTTPError, e:
-            raise relax_exception(e)
-        
-        return self._parse_response(resp, doc=doc)
+        return self._fetch(r, raise_error)
 
-    def _http_delete(self, uri):
+    def _http_delete(self, uri, raise_error=True):
         r = httpclient.HTTPRequest(self.couch_url + uri, method='DELETE',
                                    headers={'Accept': 'application/json'},
                                    use_gzip=False)
-        try:
-            resp = self.client.fetch(r)
-        except httpclient.HTTPError, e:
-            raise relax_exception(e)
+        return self._fetch(r, raise_error)
 
-        return self._parse_response(resp)
-        
+
+
 class AsyncCouch(object):
     '''Basic wrapper class for asynchronous operations on a CouchDB'''
+
     def __init__(self, db_name, host='localhost', port=5984):
         self.couch_url = 'http://{0}:{1}'.format(host, port)
         self.client = httpclient.AsyncHTTPClient()
         self.db_name = db_name
+
 
     # Database operations
 
@@ -304,7 +319,7 @@ class AsyncCouch(object):
         self._http_delete(''.join(['/', self.db_name, '/']), callback=callback)
 
     def list_dbs(self, callback=None):
-        '''List the databases'''
+        '''List the databases on the server'''
         self._http_get('/_all_dbs', callback=callback)
 
     def info_db(self, callback=None):
@@ -317,39 +332,49 @@ class AsyncCouch(object):
         self._http_post('/_replicate', body, callback=callback, connect_timeout=120.0, request_timeout=120.0)
 
     def uuids(self, count=1, callback=None):
-        def got_uuids(result):
+        def uuids_cb(resp):
             if callback:
-                if isinstance(result, Exception):
-                    callback(result)
+                if isinstance(resp, Exception):
+                    callback(resp)
                 else:
-                    callback(result['uuids'])
+                    callback(resp['uuids'])
         if count > 1:
-            q = ''.join(['?count=', str(count)])
+            url = ''.join(['/_uuids?count=', str(count)])
         else:
-            q = ''
-        url = ''.join(['/_uuids', q])
-        self._http_get(url, callback=got_uuids)
+            url = '/_uuids'
+        self._http_get(url, callback=uuids_cb)
+
 
     # Document operations
     
     def list_docs(self, callback=None):
-        '''List all documents in a given database'''
-        self._http_get(''.join(['/', self.db_name, '/_all_docs']),
-                      callback=callback)
+        '''Get dict with id and rev of all documents in the database'''
+        def list_docs_cb(resp):
+            if isinstance(resp, Exception):
+                callback(resp)
+            else:
+                callback(dict((row['id'], row['value']['rev']) for row in resp['rows']))
+        self._http_get(''.join(['/', self.db_name, '/_all_docs']), callback=callback)
 
     def get_doc(self, doc_id, callback=None):
         '''Open a document with the given id'''
-        self._http_get(''.join(['/', self.db_name, '/', url_escape(doc_id)]), callback=callback)
+        url = ''.join(['/', self.db_name, '/', url_escape(doc_id)])
+        self._http_get(url, callback=callback)
 
     def get_docs(self, doc_ids, callback=None):
         '''Get multiple documents with the given id's'''
         url = ''.join(['/', self.db_name, '/_all_docs?include_docs=true'])
         body = json_encode({'keys': doc_ids})
-        self._http_post(url, body, callback=callback)
+        def get_docs_cb(resp):
+            if isinstance(resp, Exception):
+                callback(resp)
+            else:
+                callback([row['doc'] if 'doc' in row else row for row in resp['rows']])
+        self._http_post(url, body, callback=get_docs_cb)
 
     def save_doc(self, doc, callback=None):
-        '''Save/create a document to/in a given database. On success, the
-        callback is passed a copy of the doc with updated _id and _rev keys set.'''
+        '''Save/create a document to/in a given database. Calls back with
+           a dict with id and rev of the saved doc.'''
         body = json_encode(doc)
         if '_id' in doc and '_rev' in doc:
             url = ''.join(['/', self.db_name, '/', url_escape(doc['_id'])])
@@ -359,7 +384,8 @@ class AsyncCouch(object):
             self._http_post(url, body, doc=doc, callback=callback)
 
     def save_docs(self, docs, callback=None, all_or_nothing=False):
-        '''Save/create multiple documents'''
+        '''Save/create multiple documents. Calls back with a list of dicts with id
+           and rev of the saved docs.'''
         # use bulk docs API to update the docs
         url = ''.join(['/', self.db_name, '/_bulk_docs'])
         body = json_encode({'all_or_nothing': all_or_nothing, 'docs': docs})
@@ -385,21 +411,27 @@ class AsyncCouch(object):
             body = json_encode({'all_or_nothing': all_or_nothing, 'docs': docs})
             self._http_post(url, body, callback=callback)
         
-    def get_attachment(self, doc, attachment_name, callback=None):
-        '''Open a document attachment'''
+    def get_attachment(self, doc, attachment_name, mimetype=None, callback=None):
+        '''Open a document attachment. The doc should at least contain an _id key.
+           If mimetype is not specified, the doc shall contain _attachments key with
+           info about the named attachment.'''
         if '_id' not in doc:
             callback(ValueError('Missing key named _id in doc'))
-        elif '_attachments' not in doc or attachment_name not in doc['_attachments']:
-            callback(ValueError('Document does not have an attachment with the '
-                                'specified name'))
-        else:
+        if not mimetype:
+            # get mimetype from the doc
+            if '_attachments' not in doc:
+                callback(ValueError('No attachments in doc, cannot get content type of attachment'))
+            elif attachment_name not in doc['_attachments']:
+                callback(ValueError('Document does not have an attachment by the given name'))
+            else:
+                mimetype = doc['_attachments'][attachment_name]['content_type']
             url = ''.join(['/', self.db_name, '/', url_escape(doc['_id']), '/',
                            url_escape(attachment_name)])
-            headers = {'Accept': doc['_attachments'][attachment_name]['content_type']}
+            headers = {'Accept': mimetype}
             self._http_get(url, headers=headers, callback=callback)
 
     def save_attachment(self, doc, attachment, callback=None):
-        '''Save an attachment to the specified doc. The attatchment shall be
+        '''Save an attachment to the specified doc. The attachment shall be
         a dict with keys: mimetype, name, data. The doc shall be a dict, at
         least having the key _id, and if doc is existing in the database,
         it shall also contain the key _rev'''
@@ -416,15 +448,14 @@ class AsyncCouch(object):
             self._http_put(url, body=attachment['data'], headers=headers, callback=callback)
 
     def delete_attachment(self, doc, attachment_name, callback=None):
+        '''Delete an attachment to the specified doc. The attatchment shall be
+           a dict with keys: mimetype, name, data. The doc shall be a dict, at
+           least with the keys: _id and _rev'''
         if '_rev' not in doc or '_id' not in doc:
             callback(KeyError('No id or revision information in doc'))
-        elif '_attachments' not in doc or attachment_name not in doc['_attachments']:
-            callback(ValueError('Document does not have an attachment with the '
-                                'specified name'))
-        else:
-            url = ''.join(['/', self.db_name, '/', url_escape(doc['_id']), '/',
-                           attachment_name, '?rev=', doc['_rev']])
-            self._http_delete(url, callback=callback)
+        url = ''.join(['/', self.db_name, '/', url_escape(doc['_id']), '/',
+                       attachment_name, '?rev=', doc['_rev']])
+        self._http_delete(url, callback=callback)
 
     def view(self, design_doc_name, view_name, callback=None, **kwargs):
         '''Query a pre-defined view in the specified design doc.
@@ -503,29 +534,19 @@ class AsyncCouch(object):
         
     # Basic http methods
 
-    def _http_callback(self, resp, callback, decode=True, doc=None):
+    def _http_callback(self, resp, callback, decode=True):
         if not callback:
             return
-        
         if resp.error and not resp.body:
             # error, with no response body, call back with exception
             callback(relax_exception(resp.error))
-            
         elif decode:
             # decode the JSON body and pass to the user callback function
             obj = json_decode(resp.body)
             if 'error' in obj:
                 callback(relax_exception(httpclient.HTTPError(resp.code, obj['reason'], resp)))
-                
-            elif doc:
-                # modify doc _id and _rev keys according to the response
-                new_doc = dict(doc)
-                new_doc.update({'_id': obj['id'], '_rev': obj['rev']})
-                callback(new_doc)
-                
             else:
                 callback(obj)
-                
         else:
             # pass the response body directly to the user callback function
             callback(resp.body)
