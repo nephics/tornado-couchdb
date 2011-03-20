@@ -46,11 +46,6 @@ class BlockingCouch(object):
 
     # Document operations
     
-    def list_docs(self, raise_error=True):
-        '''Get dict with id and rev of all documents in the database.'''
-        resp = self._http_get(''.join(['/', self.db_name, '/_all_docs']), raise_error=raise_error)
-        return dict((row['id'], row['value']['rev']) for row in resp['rows'])
-
     def get_doc(self, doc_id, raise_error=True):
         '''Get document with the given id.'''
         url = ''.join(['/', self.db_name, '/', url_escape(doc_id)])
@@ -205,6 +200,17 @@ class BlockingCouch(object):
           inclusive_end=true
           inclusive_end=false
         '''
+        url = ''.join(['/', self.db_name, '/_design/', design_doc_name, '/_view/', view_name])
+        return self._view(url, raise_error=raise_error, **kwargs)
+
+    def view_all_docs(self, raise_error=True, **kwargs):
+        '''Query the _all_docs view.
+        Accepts same keyword parameters as view()
+        '''
+        url = ''.join(['/', self.db_name, '/_all_docs'])
+        return self._view(url, raise_error=raise_error, **kwargs)
+
+    def _view(self, url, raise_error=True, **kwargs):
         body = None
         options = []
         if kwargs:
@@ -215,10 +221,7 @@ class BlockingCouch(object):
                     value = url_escape(json_encode(value))
                     options.append('='.join([key, value]))
         if options:
-            q = '?' + '&'.join(options)
-        else:
-            q = ''
-        url = ''.join(['/', self.db_name, '/_design/', design_doc_name, '/_view/', view_name, q])
+            url = ''.join([url, '?', '&'.join(options)])
         if body:
             return self._http_post(url, body, raise_error=raise_error)
         else:
