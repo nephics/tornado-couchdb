@@ -350,15 +350,6 @@ class AsyncCouch(object):
 
     # Document operations
     
-    def list_docs(self, callback=None):
-        '''Get dict with id and rev of all documents in the database'''
-        def list_docs_cb(resp):
-            if isinstance(resp, Exception):
-                callback(resp)
-            else:
-                callback(dict((row['id'], row['value']['rev']) for row in resp['rows']))
-        self._http_get(''.join(['/', self.db_name, '/_all_docs']), callback=callback)
-
     def get_doc(self, doc_id, callback=None):
         '''Open a document with the given id'''
         url = ''.join(['/', self.db_name, '/', url_escape(doc_id)])
@@ -516,6 +507,17 @@ class AsyncCouch(object):
           inclusive_end=true
           inclusive_end=false
         '''
+        url = ''.join(['/', self.db_name, '/_design/', design_doc_name, '/_view/', view_name])
+        self._view(url, callback=callback, **kwargs)
+
+    def view_all_docs(self, callback=None, **kwargs):
+        '''Query the _all_docs view.
+        Accepts same keyword parameters as view()
+        '''
+        url = ''.join(['/', self.db_name, '/_all_docs'])
+        self._view(url, callback=callback, **kwargs)
+
+    def _view(self, url, callback=None, **kwargs):
         body = None
         options = []
         if kwargs:
@@ -526,10 +528,7 @@ class AsyncCouch(object):
                     value = url_escape(json_encode(value))
                     options.append('='.join([key, value]))
         if options:
-            q = '?' + '&'.join(options)
-        else:
-            q = ''
-        url = ''.join(['/', self.db_name, '/_design/', design_doc_name, '/_view/', view_name, q])
+            url = ''.join([url, '?', '&'.join(options)])
         if body:
             self._http_post(url, body, callback=callback)
         else:

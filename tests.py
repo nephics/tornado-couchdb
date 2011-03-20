@@ -57,8 +57,10 @@ def run_blocking_tests():
     assert 'error' in resp[0], 'No error on request for unexisting doc'
    
     # list docs
-    resp = db.list_docs()
-    assert {doc1['_id']:doc1['_rev'], doc2['_id']:doc2['_rev']} == resp, 'Failed listing all docs'
+    resp = db.view_all_docs(include_docs=True)
+    assert {doc1['_id']:doc1['_rev'], doc2['_id']:doc2['_rev']} == \
+        dict((row['doc']['_id'], row['doc']['_rev']) for row in resp['rows']), \
+        'Failed listing all docs'
 
     # pull database
     resp = db2.pull_db('testdb', create_target=True)
@@ -68,7 +70,7 @@ def run_blocking_tests():
     # delete docs
     resp = db2.delete_docs([doc1, doc2])
     assert resp[0]['id']==doc1['_id'] and resp[1]['id']==doc2['_id'], 'Failed to delete docs'
-    assert not db2.list_docs(), 'Failed to delete docs, database not empty'
+    assert not db2.view_all_docs()['rows'], 'Failed to delete docs, database not empty'
 
     # delete database
     resp = db2.delete_db()
