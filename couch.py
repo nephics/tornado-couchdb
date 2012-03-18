@@ -270,7 +270,7 @@ class BlockingCouch(object):
         body = None
         options = []
         if kwargs:
-            for key, value in kwargs.iteritems():
+            for key, value in kwargs.items():
                 if key == 'keys':
                     body = json_encode({'keys': value})
                 else:
@@ -649,7 +649,7 @@ class AsyncCouch(object):
         body = None
         options = []
         if kwargs:
-            for key, value in kwargs.iteritems():
+            for key, value in kwargs.items():
                 if key == 'keys':
                     body = json_encode({'keys': value})
                 else:
