@@ -763,8 +763,9 @@ class AsyncCouch(object):
 class CouchException(httpclient.HTTPError):
     '''Base class for Couch specific exceptions'''
     def __init__(self, HTTPError, msg=None):
-        httpclient.HTTPError.__init__(self, HTTPError.code,
-                msg or HTTPError.message, HTTPError.response)
+        body = json_decode(HTTPError.response.body)
+        message = msg or body.get('reason')
+        httpclient.HTTPError.__init__(self, HTTPError.code, message, HTTPError.response)
 
 
 class NotModified(CouchException):
