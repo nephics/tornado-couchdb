@@ -266,20 +266,29 @@ class BlockingCouch(object):
         url = '/{0}/_all_docs'.format(self.db_name)
         return self._view(url, **kwargs)
 
+    def temp_view(self, view_doc, **kwargs):
+        '''Query a temporary view.
+        The view_doc parameter is a dict with the view's map and reduce
+        functions.'''
+        url = '/{0}/_temp_view'.format(self.db_name)
+        return self._view(url, body=view_doc, **kwargs)
+
     def _view(self, url, **kwargs):
-        body = None
+        body = kwargs.get('body', {})
         options = []
         if kwargs:
             for key, value in kwargs.items():
+                if key == 'body':
+                    continue
                 if key == 'keys':
-                    body = json_encode({'keys': value})
+                    body.update({'keys': value})
                 else:
                     value = url_escape(json_encode(value))
                     options.append('='.join([key, value]))
         if options:
             url = '{0}?{1}'.format(url, '&'.join(options))
         if body:
-            return self._http_post(url, body)
+            return self._http_post(url, json_encode(body))
         else:
             return self._http_get(url)
 
@@ -645,20 +654,29 @@ class AsyncCouch(object):
         url = '/{0}/_all_docs'.format(self.db_name)
         self._view(url, callback=callback, **kwargs)
 
+    def temp_view(self, view_doc, callback, **kwargs):
+        '''Query a temporary view.
+        The view_doc parameter is a dict with the view's map and reduce
+        functions.'''
+        url = '/{0}/_temp_view'.format(self.db_name)
+        return self._view(url, body=view_doc, callback=callback, **kwargs)
+
     def _view(self, url, callback=None, **kwargs):
-        body = None
+        body = kwargs.get('body', {})
         options = []
         if kwargs:
             for key, value in kwargs.items():
+                if key == 'body':
+                    continue
                 if key == 'keys':
-                    body = json_encode({'keys': value})
+                    body.update({'keys': value})
                 else:
                     value = url_escape(json_encode(value))
                     options.append('='.join([key, value]))
         if options:
             url = '{0}?{1}'.format(url, '&'.join(options))
         if body:
-            self._http_post(url, body, callback=callback)
+            self._http_post(url, json_encode(body), callback=callback)
         else:
             self._http_get(url, callback=callback)
 
