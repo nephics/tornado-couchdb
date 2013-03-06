@@ -1,9 +1,14 @@
-'''Blocking and non-blocking client interfaces to CouchDB using Tornado's
-builtin `httpclient`.
+""""Blocking and non-blocking (asynchronous) clients for CouchDB using Tornado's httpclient.
 
 This module wraps the CouchDB HTTP REST API and defines a common interface
 for making blocking and non-blocking operations on a CouchDB.
-'''
+"""
+
+
+__all__ = ["BlockingCouch", "AsyncCouch", "CouchException", "NotModified",
+        "BadRequest", "NotFound", "MethodNotAllowed", "Conflict",
+        "PreconditionFailed", "InternalServerError"]
+
 
 import copy
 
@@ -35,7 +40,8 @@ class BlockingCouch(object):
         All parameters are optional. Though `db_name` is required for most
         methods to work.
 
-        :arg string db_name: Database name
+        :arg string db_name: Database name, may set on init and modified later
+            as the object attribute `db_name`.
         :arg string couch_url: The url to the CouchDB including port number,
             but without authentication credentials.
         :arg keyword request_args: Arguments applied when making requests to
@@ -45,7 +51,8 @@ class BlockingCouch(object):
             By default `use_gzip` is set to False. Accessing a non-local
             CouchDB it may be relevant to set `use_gzip` to True.
         '''
-        request_args.update({'use_gzip': False})
+        if 'use_gzip' not in request_args:
+            request_args['use_gzip'] = False
         self.request_args = request_args
         self.client = httpclient.HTTPClient()
         self.couch_url = couch_url
@@ -386,8 +393,8 @@ class AsyncCouch(object):
 
         class TestCouch(object):
 
-            def __init_(self):
-                self.db = couch.AsyncCouch('mydatabase')
+            def __init_(self, dbname):
+                self.db = couch.AsyncCouch(dbname)
                 self.db.create_db(self.dbcreated)
 
             def dbcreated(self, r):
@@ -398,6 +405,8 @@ class AsyncCouch(object):
 
             def gotdoc(self, doc):
                 self.db.delete_doc(doc)
+
+        TestCouch('mydatabase')
 
     For any methods of this class: If an error is returned from the database,
     the argument to the callback will contain the appropriate CouchException.
@@ -410,7 +419,8 @@ class AsyncCouch(object):
         All parameters are optional. Though `db_name` is required for most
         methods to work.
 
-        :arg string db_name: Database name
+        :arg string db_name: Database name, may set on init and modified later
+            as the object attribute `db_name`.
         :arg string couch_url: The url to the CouchDB including port number,
             but without authentication credentials.
         :arg keyword request_args: Arguments applied when making requests to
@@ -420,7 +430,8 @@ class AsyncCouch(object):
             By default `use_gzip` is set to False. Accessing a non-local
             CouchDB it may be relevant to set `use_gzip` to True.
         '''
-        request_args.update({'use_gzip': False})
+        if 'use_gzip' not in request_args:
+            request_args['use_gzip'] = False
         self.request_args = request_args
         self.client = httpclient.AsyncHTTPClient()
         self.couch_url = couch_url
