@@ -15,5 +15,6 @@ setup(
     'License :: OSI Approved :: MIT License',
     'Programming Language :: Python :: 2.7',
     'Programming Language :: Python :: 3'
-    ]
+    ],
+    download_url='https://bitbucket.org/nephics/tornado-couchdb/get/v0.1.1.tar.gz'
 )
