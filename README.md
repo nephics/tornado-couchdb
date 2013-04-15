@@ -8,6 +8,8 @@ Install using `pip`:
 
     pip install https://bitbucket.org/nephics/tornado-couchdb/get/default.zip
 
+The code has been tested with Python 3.3 and 2.7.
+
 ## BlockingCouch
 
 The BlockingCouch class is a basic wrapper for making blocking operations on a CouchDB. Using this class implies that the Tornado eventloop is blocked on a database call, waiting for reply from the database.

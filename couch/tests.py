@@ -130,7 +130,7 @@ def run_blocking_tests():
 
     # get attachment
     resp = db.get_attachment(doc1, attachment['name'], attachment['mimetype'])
-    assert json.loads(resp) == data, 'Attachment not loaded'
+    assert json.loads(resp.decode('utf8')) == data, 'Attachment not loaded'
 
     # delete attachment
     resp = db.delete_attachment(doc1, attachment['name'])
@@ -320,7 +320,8 @@ class AsyncTests(object):
                 self.attachment['mimetype'], callback=self.got_attachment)
 
     def got_attachment(self, resp):
-        if self.check(json.loads(resp) == self.data, 'Attachment not loaded'):
+        if self.check(json.loads(resp.decode('utf8')) == self.data,
+                'Attachment not loaded'):
             # delete attachment
             self.db.delete_attachment(self.doc1, self.attachment['name'],
                 self.deleted_attachment)

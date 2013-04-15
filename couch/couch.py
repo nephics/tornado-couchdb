@@ -9,6 +9,8 @@ __all__ = ["BlockingCouch", "AsyncCouch", "CouchException", "NotModified",
         "BadRequest", "NotFound", "MethodNotAllowed", "Conflict",
         "PreconditionFailed", "InternalServerError"]
 
+__version__ = '0.1.1'
+
 
 import copy
 
