@@ -1,1 +1,1 @@
-from couch import *
+from .couch import *
