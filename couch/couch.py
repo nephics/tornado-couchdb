@@ -9,7 +9,7 @@ __all__ = ["BlockingCouch", "AsyncCouch", "CouchException", "NotModified",
         "BadRequest", "NotFound", "MethodNotAllowed", "Conflict",
         "PreconditionFailed", "InternalServerError"]
 
-__version__ = '0.1.1'
+__version__ = '0.1.2'
 
 
 import copy
@@ -795,7 +795,7 @@ class CouchException(httpclient.HTTPError):
     '''Base class for Couch specific exceptions'''
     def __init__(self, HTTPError, msg=None):
         httpclient.HTTPError.__init__(self, HTTPError.code,
-                msg or HTTPError.message, HTTPError.response)
+                msg, HTTPError.response)
 
 
 class NotModified(CouchException):
