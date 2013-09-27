@@ -33,11 +33,11 @@ Example error handling:
 
     import couch
 
-     db = couch.AsyncCouch('mytestdb')
-     try:
-         doc = db.get_doc('non-existing-id')
-     except couch.NotFound:
-         print('Document not found')
+    db = couch.AsyncCouch('mytestdb')
+    try:
+        doc = db.get_doc('non-existing-id')
+    except couch.NotFound:
+        print('Document not found')
 
 
 ## AsyncCouch
@@ -78,7 +78,7 @@ Example error handling:
          except couch.NotFound:
              print('Document not found')
      
-     ioloop.IOLoop.run_sync(run_test)
+     ioloop.IOLoop.run_sync(main)
  
 Note: In versions before 0.2.0, if error occured in the database call,  AsyncCouch would pass the exception as a parameter to the callback function.
 
