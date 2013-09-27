@@ -3,15 +3,20 @@ import re
 
 import couch
 
-import tornado.ioloop
+from tornado import ioloop, gen
+
+
+dbname1 = 'tornado-couch-testdb'
+dbname2 = 'tornado-couch-testdb2'
+
 
 def run_blocking_tests():
     # set up tests
     doc1 = {'msg': 'Test doc 1'}
     doc2 = {'msg': 'Test doc 2'}
 
-    db = couch.BlockingCouch('testdb')
-    db2 = couch.BlockingCouch('testdb2')
+    db = couch.BlockingCouch(dbname1)
+    db2 = couch.BlockingCouch(dbname2)
 
     try:
         db.delete_db()
@@ -32,7 +37,8 @@ def run_blocking_tests():
 
     # info_db
     resp = db.info_db()
-    assert ('db_name' in resp) and (resp['db_name'] == db.db_name), 'No database info'
+    assert ('db_name' in resp) and (resp['db_name'] == db.db_name), \
+           'No database info'
 
     # uuids
     resp = db.uuids()
@@ -45,11 +51,10 @@ def run_blocking_tests():
 
     # save doc with wrong rev number
     try:
-        resp = db.save_doc({'_id': doc1['_id'], '_rev': 'a'})
+        db.save_doc({'_id': doc1['_id'], '_rev': 'a'})
+        raise AssertionError('No error when overwriting doc with wrong rev')
     except couch.CouchException:
         pass
-    else:
-        raise AssertionError('No error when overwriting doc with wrong rev')
 
     # get doc
     resp = db.get_doc(doc1['_id'])
@@ -58,15 +63,15 @@ def run_blocking_tests():
     # get non-existing doc
     try:
         resp = db.get_doc('a')
+        raise AssertionError('No error on request for unexisting doc')
     except couch.NotFound:
         pass
-    else:
-        raise AssertionError('No error on request for unexisting doc')
 
     # save docs
     doc1['msg2'] = 'Another message'
     resp = db.save_docs([doc1, doc2])
-    assert all('rev' in item and 'id' in item for item in resp), 'Failed to save docs'
+    assert all('rev' in item and 'id' in item for item in resp), \
+           'Failed to save docs'
     doc1['_rev'] = resp[0]['rev']
     doc2.update({'_id': resp[1]['id'], '_rev': resp[1]['rev']})
 
@@ -84,17 +89,22 @@ def run_blocking_tests():
 
     # list docs
     resp = db.view_all_docs(include_docs=True)
-    assert {doc1['_id']:doc1['_rev'], doc2['_id']:doc2['_rev']} == dict((row['doc']['_id'], row['doc']['_rev']) for row in resp['rows']), 'Failed listing all docs'
+    assert {doc1['_id']:doc1['_rev'], doc2['_id']:doc2['_rev']} == \
+           dict((row['doc']['_id'], row['doc']['_rev'])
+                for row in resp['rows']), 'Failed listing all docs'
 
     # pull database
-    resp = db2.pull_db('testdb', create_target=True)
+    resp = db2.pull_db(dbname1, create_target=True)
     assert 'ok' in resp, 'Replication failed'
-    assert 'testdb2' in db2.list_dbs(), 'Replication failed, new database replication not found'
+    assert dbname2 in db2.list_dbs(), \
+           'Replication failed, new database replication not found'
 
     # delete docs
     resp = db2.delete_docs([doc1, doc2])
-    assert resp[0]['id']==doc1['_id'] and resp[1]['id']==doc2['_id'], 'Failed to delete docs'
-    assert len(db2.view_all_docs()['rows'])==0, 'Failed to delete docs, database not empty'
+    assert resp[0]['id']==doc1['_id'] and resp[1]['id']==doc2['_id'], \
+           'Failed to delete docs'
+    assert len(db2.view_all_docs()['rows'])==0, \
+           'Failed to delete docs, database not empty'
 
     # delete database
     resp = db2.delete_db()
@@ -105,7 +115,8 @@ def run_blocking_tests():
         '_id': '_design/test',
         'views': {
             'msg': {
-                'map': 'function(doc) { if (doc.msg) { emit(doc._id, doc.msg); } }'
+                'map': 'function(doc) { if (doc.msg) { '
+                       'emit(doc._id, doc.msg); } }'
             }
         }
     }
@@ -115,7 +126,8 @@ def run_blocking_tests():
 
     # view
     resp = db.view('test', 'msg')
-    assert [doc1['_id'], doc2['_id']] == [row['key'] for row in resp['rows']], 'Failed to get view results from design doc'
+    assert [doc1['_id'], doc2['_id']] == [row['key'] for row in resp['rows']], \
+           'Failed to get view results from design doc'
 
     # delete doc
     resp = db.delete_doc(doc2)
@@ -123,7 +135,8 @@ def run_blocking_tests():
 
     # save attachment
     data = {'msg3': 'This is a test'}
-    attachment = {'mimetype': 'application/json', 'name': 'test attachment', 'data': json.dumps(data)}
+    attachment = {'mimetype': 'application/json', 'name': 'test attachment',
+                 'data': json.dumps(data)}
     resp = db.save_attachment(doc1, attachment)
     assert 'ok' in resp, 'Attachment not saved'
     doc1['_rev'] = resp['rev']
@@ -142,199 +155,162 @@ def run_blocking_tests():
     print('All blocking tests passed')
 
 
-class AsyncTests(object):
+@gen.coroutine
+def run_async_tests():
 
-    def __init__(self):
-        # set up tests
-        self.doc1 = {'msg': 'Test doc 1'}
-        self.doc2 = {'msg': 'Test doc 2'}
+    # set up tests
+    doc1 = {'msg': 'Test doc 1'}
+    doc2 = {'msg': 'Test doc 2'}
 
-        self.db = couch.AsyncCouch('testdb')
-        self.db2 = couch.AsyncCouch('testdb2')
+    db = couch.AsyncCouch(dbname1)
+    db2 = couch.AsyncCouch(dbname2)
 
-        self.db.delete_db(self.init_deleted_db)
+    try:
+        yield db.delete_db()
+    except couch.NotFound:
+        pass
+    try:
+        yield db2.delete_db()
+    except couch.NotFound:
+        pass
 
-        self.error = None
-        self.ioloop = tornado.ioloop.IOLoop.instance()
-        self.ioloop.start()
+    # create database
+    resp = yield db.create_db()
+    assert 'ok' in resp, 'Failed to create database'
 
-        if self.error:
-            raise AssertionError(self.error)
-        else:
-            print('All async tests passed')
+    # list databases
+    resp = yield db.list_dbs()
+    assert db.db_name in resp, 'Database not in list of databases'
 
-    def check(self, value, msg):
-        if not value:
-            self.error = msg
-            self.ioloop.stop()
-            return False
-        return True
+    # info_db
+    resp = yield db.info_db()
+    assert ('db_name' in resp) and (resp['db_name'] == db.db_name), \
+           'No database info'
 
-    def init_deleted_db(self, resp):
-        self.db2.delete_db(self.init_deleted_db2)
+    # uuids
+    resp = yield db.uuids()
+    assert re.match('[0-9a-f]{32}', resp[0]), 'Failed to get uuid'
 
-    def init_deleted_db2(self, resp):
-        # create database
-        self.db.create_db(self.created_db)
+    # save doc
+    resp = yield db.save_doc(doc1)
+    assert ('rev' in resp) and ('id' in resp), 'Failed to save doc'
+    doc1.update({'_id':resp['id'], '_rev':resp['rev']})
 
-    def created_db(self, resp):
-        if self.check('ok' in resp, 'Failed to create database'):
-            # list databases
-            self.db.list_dbs(self.listed_dbs)
+    # save doc with wrong rev number
+    try:
+        yield db.save_doc({'_id': doc1['_id'], '_rev': 'a'})
+        raise AssertionError('No error when overwriting doc with wrong rev')
+    except couch.CouchException:
+        pass
 
-    def listed_dbs(self, resp):
-        if self.check(self.db.db_name in resp,
-                'Database not in list of databases'):
-            # info_db
-            self.db.info_db(self.info_db)
+    # get doc
+    resp = yield db.get_doc(doc1['_id'])
+    assert doc1 == resp, 'Failed to get doc'
 
-    def info_db(self, resp):
-        if self.check(('db_name' in resp) and
-                (resp['db_name'] == self.db.db_name), 'No database info'):
-            # uuids
-            self.db.uuids(callback=self.uuids)
+    # get non-existing doc
+    try:
+        yield db.get_doc('a')
+        raise AssertionError('No error on request for unexisting doc')
+    except couch.NotFound:
+        pass
 
-    def uuids(self, resp):
-        if self.check(re.match('[0-9a-f]{32}', resp[0]), 'Failed to get uuid'):
-            # save doc
-            self.db.save_doc(self.doc1, self.saved_doc1)
+    # save docs
+    doc1['msg2'] = 'Another message'
+    resp = yield db.save_docs([doc1, doc2])
+    assert all('rev' in item and 'id' in item for item in resp), \
+           'Failed to save docs'
+    doc1['_rev'] = resp[0]['rev']
+    doc2.update({'_id': resp[1]['id'], '_rev': resp[1]['rev']})
 
-    def saved_doc1(self, resp):
-        if self.check(('rev' in resp) and ('id' in resp), 'Failed to save doc'):
-            self.doc1.update({'_id':resp['id'], '_rev':resp['rev']})
+    # get docs
+    resp = yield db.get_docs([doc1['_id'], doc2['_id']])
+    assert [doc1, doc2] == resp, 'Failed to get docs'
 
-            # save doc with wrong rev number
-            self.db.save_doc({'_id': self.doc1['_id'], '_rev': 'a'},
-                    self.saved_doc1_norev)
+    # get non-existing docs
+    try:
+        yield db.get_docs(['a', 'b'])
+        raise AssertionError('No error on request for unexisting docs')
+    except couch.NotFound:
+        pass
 
-    def saved_doc1_norev(self, resp):
-        if self.check(isinstance(resp, couch.CouchException),
-                'No error when overwriting doc with wrong rev'):
-            # get doc
-            self.db.get_doc(self.doc1['_id'], self.got_doc1)
+    # list docs
+    resp = yield db.view_all_docs(include_docs=True)
+    assert {doc1['_id']: doc1['_rev'], doc2['_id']: doc2['_rev']} == \
+            dict((row['doc']['_id'], row['doc']['_rev'])
+                 for row in resp['rows']), 'Failed listing all docs'
 
-    def got_doc1(self, resp):
-        if self.check(self.doc1 == resp, 'Failed to get doc'):
-            # get non-existing doc
-            self.db.get_doc('a', self.got_nodoc)
+    # pull database
+    resp = yield db2.pull_db(dbname1, create_target=True)
+    assert 'ok' in resp, 'Replication failed'
 
-    def got_nodoc(self, resp):
-        if self.check(isinstance(resp, couch.NotFound),
-                'No error on request for unexisting doc'):
-            # save docs
-            self.doc1['msg2'] = 'Another message'
-            self.db.save_docs([self.doc1, self.doc2], self.saved_docs)
+    # verify that replicated db is in the list of dbs
+    resp = yield db2.list_dbs()
+    assert dbname2 in resp, \
+           'Replication failed, new database replication not found'
 
-    def saved_docs(self, resp):
-        if self.check(all('rev' in item and 'id' in item for item in resp),
-                'Failed to save docs'):
-            self.doc1['_rev'] = resp[0]['rev']
-            self.doc2.update({'_id': resp[1]['id'], '_rev': resp[1]['rev']})
+    # delete docs
+    resp = yield db2.delete_docs([doc1, doc2])
+    assert resp[0]['id']==doc1['_id'] and \
+           resp[1]['id']==doc2['_id'], 'Failed to delete docs'
 
-            # get docs
-            self.db.get_docs([self.doc1['_id'], self.doc2['_id']],
-                    self.got_docs)
+    # check that deleted docs are not in the list all docs
+    resp = yield db2.view_all_docs()
+    assert len(resp['rows'])==0, 'Failed to delete docs, database not empty'
 
-    def got_docs(self, resp):
-        if self.check([self.doc1, self.doc2] == resp, 'Failed to get docs'):
-            # get non-existing docs
-            self.db.get_docs(['a', 'b'], self.got_nodocs)
+    # delete database
+    resp = yield db2.delete_db()
+    assert 'ok' in resp, 'Failed to delete database'
 
-    def got_nodocs(self, resp):
-        if self.check(isinstance(resp, couch.NotFound),
-                'No error on request for unexisting docs'):
-            # list docs
-            self.db.view_all_docs(self.list_docs, include_docs=True)
-
-    def list_docs(self, resp):
-        if self.check({self.doc1['_id']: self.doc1['_rev'],
-                self.doc2['_id']: self.doc2['_rev']} ==
-                dict((row['doc']['_id'], row['doc']['_rev'])
-                for row in resp['rows']), 'Failed listing all docs'):
-            # pull database
-            self.db2.pull_db('testdb', self.pulled_db, create_target=True)
-
-    def pulled_db(self, resp):
-        if self.check('ok' in resp, 'Replication failed'):
-           self.db2.list_dbs(self.pulled_db_verified)
-
-    def pulled_db_verified(self, resp):
-        if self.check('testdb2' in resp, 'Replication failed, new database '
-                'replication not found'):
-            # delete docs
-            self.db2.delete_docs([self.doc1, self.doc2], self.deleted_docs)
-
-    def deleted_docs(self, resp):
-        if self.check(resp[0]['id']==self.doc1['_id'] and
-                resp[1]['id']==self.doc2['_id'], 'Failed to delete docs'):
-            self.db2.view_all_docs(self.deleted_docs_verified)
-
-    def deleted_docs_verified(self, resp):
-        if self.check(len(resp['rows'])==0, 'Failed to delete docs, database not empty'):
-            # delete database
-            self.db2.delete_db(self.deleted_db2)
-
-    def deleted_db2(self, resp):
-        if self.check('ok' in resp, 'Failed to delete database'):
-            # upload design doc
-            self.design = {
-                '_id': '_design/test',
-                'views': {
-                    'msg': {
-                        'map': 'function(doc) { if (doc.msg) { emit(doc._id, doc.msg); } }'
-                    }
-                }
+    # upload design doc
+    design = {
+        '_id': '_design/test',
+        'views': {
+            'msg': {
+                'map': 'function(doc) { if (doc.msg) { '
+                       'emit(doc._id, doc.msg); } }'
             }
-            self.db.save_doc(self.design, self.saved_design)
+        }
+    }
+    resp = yield db.save_doc(design)
+    assert 'ok' in resp, 'Failed to upload design doc'
+    design['_rev'] = resp['rev']
 
-    def saved_design(self, resp):
-        if self.check('ok' in resp, 'Failed to upload design doc'):
-            self.design['_rev'] = resp['rev']
+    # view
+    resp = yield db.view('test', 'msg')
+    assert [doc1['_id'], doc2['_id']] == \
+           [row['key'] for row in resp['rows']], \
+           'Failed to get view results from design doc'
 
-            # view
-            self.db.view('test', 'msg', self.viewed)
+    # delete doc
+    resp = yield db.delete_doc(doc2)
+    assert resp['id'] == doc2['_id'], 'Failed to delete doc2'
 
-    def viewed(self, resp):
-        if self.check([self.doc1['_id'], self.doc2['_id']] ==
-                [row['key'] for row in resp['rows']],
-                'Failed to get view results from design doc'):
-            # delete doc
-            self.db.delete_doc(self.doc2, self.deleted_doc2)
+    # save attachment
+    data = {'msg3': 'This is a test'}
+    attachment = {'mimetype': 'application/json',
+            'name': 'test attachment', 'data': json.dumps(data)}
 
-    def deleted_doc2(self, resp):
-        if self.check(resp['id'] == self.doc2['_id'], 'Failed to delete doc2'):
-            # save attachment
-            self.data = {'msg3': 'This is a test'}
-            self.attachment = {'mimetype': 'application/json',
-                    'name': 'test attachment', 'data': json.dumps(self.data)}
+    resp = yield db.save_attachment(doc1, attachment)
+    assert 'ok' in resp, 'Attachment not saved'
+    doc1['_rev'] = resp['rev']
 
-            self.db.save_attachment(self.doc1, self.attachment,
-                    self.saved_attachment)
+    # get attachment
+    resp = yield db.get_attachment(doc1, attachment['name'],
+                                   attachment['mimetype'])
+    assert json.loads(resp.decode('utf8')) == data, \
+           'Attachment not loaded'
 
-    def saved_attachment(self, resp):
-        if self.check('ok' in resp, 'Attachment not saved'):
-            self.doc1['_rev'] = resp['rev']
+    # delete attachment
+    resp = yield db.delete_attachment(doc1, attachment['name'])
+    assert 'ok' in resp, 'Attachment not deleted'
+    doc1['_rev'] = resp['rev']
 
-            # get attachment
-            self.db.get_attachment(self.doc1, self.attachment['name'],
-                self.attachment['mimetype'], callback=self.got_attachment)
+    # done testing, delete test db
+    yield db.delete_db()
 
-    def got_attachment(self, resp):
-        if self.check(json.loads(resp.decode('utf8')) == self.data,
-                'Attachment not loaded'):
-            # delete attachment
-            self.db.delete_attachment(self.doc1, self.attachment['name'],
-                self.deleted_attachment)
-
-    def deleted_attachment(self, resp):
-        if self.check('ok' in resp, 'Attachment not deleted'):
-            self.doc1['_rev'] = resp['rev']
-
-            # done testing
-            cb = lambda r: self.ioloop.stop()
-            self.db.delete_db(cb)
+    print('All async tests passed')
 
 
 if __name__ == '__main__':
     run_blocking_tests()
-    AsyncTests()
+    ioloop.IOLoop.instance().run_sync(run_async_tests)
