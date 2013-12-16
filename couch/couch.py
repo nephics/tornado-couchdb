@@ -9,7 +9,7 @@ __all__ = ["BlockingCouch", "AsyncCouch", "CouchException", "NotModified",
         "BadRequest", "NotFound", "MethodNotAllowed", "Conflict",
         "PreconditionFailed", "InternalServerError"]
 
-__version__ = '0.2.0'
+__version__ = '0.2.1'
 
 
 import copy
@@ -70,10 +70,7 @@ class AsyncCouch(object):
         self.couch_url = couch_url
         self.db_name = db_name
         self._closed = False
-        
-    def __del__(self):
-        self.close()
-    
+
     def close(self):
         """Closes the CouchDB client, freeing any resources used."""
         if not self._closed:

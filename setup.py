@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name='tornado-couchdb',
-    version='0.2.0',
+    version='0.2.1',
     description="Blocking and non-blocking (asynchronous) clients for CouchDB using Tornado's httpclient",
     author='Jacob Sondergaard',
     author_email='jacob@nephics.com',
@@ -16,5 +16,5 @@ setup(
     'Programming Language :: Python :: 2.7',
     'Programming Language :: Python :: 3'
     ],
-    download_url='https://bitbucket.org/nephics/tornado-couchdb/get/v0.2.0.tar.gz'
+    download_url='https://bitbucket.org/nephics/tornado-couchdb/get/v0.2.1.tar.gz'
 )
