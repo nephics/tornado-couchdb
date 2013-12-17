@@ -396,10 +396,13 @@ class AsyncCouch(object):
                         row['error'], resp))
         return obj
 
-    @gen.coroutine
-    def _http_get(self, uri, headers=None):
+    def _test_closed(self):
         if self._closed:
             raise CouchException('Database connection is closed.')
+
+    @gen.coroutine
+    def _http_get(self, uri, headers=None):
+        self._test_closed()
         if headers is None:
             headers = {}
         req_args = copy.deepcopy(self.request_args)
@@ -422,8 +425,7 @@ class AsyncCouch(object):
 
     @gen.coroutine
     def _http_post(self, uri, body, **kwargs):
-        if self._closed:
-            raise CouchException('Database connection is closed.')
+        self._test_closed()
         req_args = copy.deepcopy(self.request_args)
         req_args.update(kwargs)
         req_args.setdefault('headers', {}).update({
@@ -441,8 +443,7 @@ class AsyncCouch(object):
 
     @gen.coroutine
     def _http_put(self, uri, body='', headers=None):
-        if self._closed:
-            raise CouchException('Database connection is closed.')
+        self._test_closed()
         if headers is None:
             headers = {}
         req_args = copy.deepcopy(self.request_args)
@@ -463,8 +464,7 @@ class AsyncCouch(object):
 
     @gen.coroutine
     def _http_delete(self, uri):
-        if self._closed:
-            raise CouchException('Database connection is closed.')
+        self._test_closed()
         req_args = copy.deepcopy(self.request_args)
         req_args.setdefault('headers', {}).update({
             'Accept': 'application/json'})
