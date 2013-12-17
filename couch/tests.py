@@ -38,7 +38,7 @@ def run_blocking_tests():
     # info_db
     resp = db.info_db()
     assert ('db_name' in resp) and (resp['db_name'] == db.db_name), \
-           'No database info'
+        'No database info'
 
     # uuids
     resp = db.uuids()
@@ -47,7 +47,7 @@ def run_blocking_tests():
     # save doc
     resp = db.save_doc(doc1)
     assert ('rev' in resp) and ('id' in resp), 'Failed to save doc'
-    doc1.update({'_id':resp['id'], '_rev':resp['rev']})
+    doc1.update({'_id': resp['id'], '_rev': resp['rev']})
 
     # save doc with wrong rev number
     try:
@@ -63,7 +63,7 @@ def run_blocking_tests():
     # has doc on non-existing doc
     resp = db.has_doc('a')
     assert not resp, "Failed on getting head of non-existing doc"
-    
+
     # get doc
     resp = db.get_doc(doc1['_id'])
     assert doc1 == resp, 'Failed to get doc'
@@ -79,7 +79,7 @@ def run_blocking_tests():
     doc1['msg2'] = 'Another message'
     resp = db.save_docs([doc1, doc2])
     assert all('rev' in item and 'id' in item for item in resp), \
-           'Failed to save docs'
+        'Failed to save docs'
     doc1['_rev'] = resp[0]['rev']
     doc2.update({'_id': resp[1]['id'], '_rev': resp[1]['rev']})
 
@@ -97,22 +97,22 @@ def run_blocking_tests():
 
     # list docs
     resp = db.view_all_docs(include_docs=True)
-    assert {doc1['_id']:doc1['_rev'], doc2['_id']:doc2['_rev']} == \
-           dict((row['doc']['_id'], row['doc']['_rev'])
-                for row in resp['rows']), 'Failed listing all docs'
+    assert {doc1['_id']: doc1['_rev'], doc2['_id']: doc2['_rev']} == \
+        dict((row['doc']['_id'], row['doc']['_rev'])
+             for row in resp['rows']), 'Failed listing all docs'
 
     # pull database
     resp = db2.pull_db(dbname1, create_target=True)
     assert 'ok' in resp, 'Replication failed'
     assert dbname2 in db2.list_dbs(), \
-           'Replication failed, new database replication not found'
+        'Replication failed, new database replication not found'
 
     # delete docs
     resp = db2.delete_docs([doc1, doc2])
-    assert resp[0]['id']==doc1['_id'] and resp[1]['id']==doc2['_id'], \
-           'Failed to delete docs'
-    assert len(db2.view_all_docs()['rows'])==0, \
-           'Failed to delete docs, database not empty'
+    assert resp[0]['id'] == doc1['_id'] and resp[1]['id'] == doc2['_id'], \
+        'Failed to delete docs'
+    assert len(db2.view_all_docs()['rows']) == 0, \
+        'Failed to delete docs, database not empty'
 
     # delete database
     resp = db2.delete_db()
@@ -135,7 +135,7 @@ def run_blocking_tests():
     # view
     resp = db.view('test', 'msg')
     assert [doc1['_id'], doc2['_id']] == [row['key'] for row in resp['rows']], \
-           'Failed to get view results from design doc'
+        'Failed to get view results from design doc'
 
     # delete doc
     resp = db.delete_doc(doc2)
@@ -144,7 +144,7 @@ def run_blocking_tests():
     # save attachment
     data = {'msg3': 'This is a test'}
     attachment = {'mimetype': 'application/json', 'name': 'test attachment',
-                 'data': json.dumps(data)}
+                  'data': json.dumps(data)}
     resp = db.save_attachment(doc1, attachment)
     assert 'ok' in resp, 'Attachment not saved'
     doc1['_rev'] = resp['rev']
@@ -193,7 +193,7 @@ def run_async_tests():
     # info_db
     resp = yield db.info_db()
     assert ('db_name' in resp) and (resp['db_name'] == db.db_name), \
-           'No database info'
+        'No database info'
 
     # uuids
     resp = yield db.uuids()
@@ -202,7 +202,7 @@ def run_async_tests():
     # save doc
     resp = yield db.save_doc(doc1)
     assert ('rev' in resp) and ('id' in resp), 'Failed to save doc'
-    doc1.update({'_id':resp['id'], '_rev':resp['rev']})
+    doc1.update({'_id': resp['id'], '_rev': resp['rev']})
 
     # save doc with wrong rev number
     try:
@@ -224,17 +224,17 @@ def run_async_tests():
 
     # has doc
     resp = yield db.has_doc(doc1['_id'])
-    assert resp, "Failed to get doc HEAD"    
-        
+    assert resp, "Failed to get doc HEAD"
+
     # has doc on non-existing doc
     resp = yield db.has_doc('a')
     assert not resp, "Has a non-existing doc"
-    
+
     # save docs
     doc1['msg2'] = 'Another message'
     resp = yield db.save_docs([doc1, doc2])
     assert all('rev' in item and 'id' in item for item in resp), \
-           'Failed to save docs'
+        'Failed to save docs'
     doc1['_rev'] = resp[0]['rev']
     doc2.update({'_id': resp[1]['id'], '_rev': resp[1]['rev']})
 
@@ -252,8 +252,8 @@ def run_async_tests():
     # list docs
     resp = yield db.view_all_docs(include_docs=True)
     assert {doc1['_id']: doc1['_rev'], doc2['_id']: doc2['_rev']} == \
-            dict((row['doc']['_id'], row['doc']['_rev'])
-                 for row in resp['rows']), 'Failed listing all docs'
+        dict((row['doc']['_id'], row['doc']['_rev'])
+             for row in resp['rows']), 'Failed listing all docs'
 
     # pull database
     resp = yield db2.pull_db(dbname1, create_target=True)
@@ -262,16 +262,16 @@ def run_async_tests():
     # verify that replicated db is in the list of dbs
     resp = yield db2.list_dbs()
     assert dbname2 in resp, \
-           'Replication failed, new database replication not found'
+        'Replication failed, new database replication not found'
 
     # delete docs
     resp = yield db2.delete_docs([doc1, doc2])
-    assert resp[0]['id']==doc1['_id'] and \
-           resp[1]['id']==doc2['_id'], 'Failed to delete docs'
+    assert resp[0]['id'] == doc1['_id'] and \
+        resp[1]['id'] == doc2['_id'], 'Failed to delete docs'
 
     # check that deleted docs are not in the list all docs
     resp = yield db2.view_all_docs()
-    assert len(resp['rows'])==0, 'Failed to delete docs, database not empty'
+    assert len(resp['rows']) == 0, 'Failed to delete docs, database not empty'
 
     # delete database
     resp = yield db2.delete_db()
@@ -295,7 +295,7 @@ def run_async_tests():
     resp = yield db.view('test', 'msg')
     assert [doc1['_id'], doc2['_id']] == \
            [row['key'] for row in resp['rows']], \
-           'Failed to get view results from design doc'
+        'Failed to get view results from design doc'
 
     # delete doc
     resp = yield db.delete_doc(doc2)
@@ -304,7 +304,7 @@ def run_async_tests():
     # save attachment
     data = {'msg3': 'This is a test'}
     attachment = {'mimetype': 'application/json',
-            'name': 'test attachment', 'data': json.dumps(data)}
+                  'name': 'test attachment', 'data': json.dumps(data)}
 
     resp = yield db.save_attachment(doc1, attachment)
     assert 'ok' in resp, 'Attachment not saved'
@@ -314,7 +314,7 @@ def run_async_tests():
     resp = yield db.get_attachment(doc1, attachment['name'],
                                    attachment['mimetype'])
     assert json.loads(resp.decode('utf8')) == data, \
-           'Attachment not loaded'
+        'Attachment not loaded'
 
     # delete attachment
     resp = yield db.delete_attachment(doc1, attachment['name'])

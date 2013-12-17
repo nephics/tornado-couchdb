@@ -6,8 +6,8 @@ for making blocking and non-blocking operations on a CouchDB.
 
 
 __all__ = ["BlockingCouch", "AsyncCouch", "CouchException", "NotModified",
-        "BadRequest", "NotFound", "MethodNotAllowed", "Conflict",
-        "PreconditionFailed", "InternalServerError"]
+           "BadRequest", "NotFound", "MethodNotAllowed", "Conflict",
+           "PreconditionFailed", "InternalServerError"]
 
 __version__ = '0.2.1'
 
@@ -26,7 +26,9 @@ from tornado.escape import json_decode, json_encode, url_escape
 
 JSON_MIME_TYPE = 'application/json'
 
+
 class AsyncCouch(object):
+
     """Basic wrapper class for asynchronous operations on a CouchDB
 
     Example usage::
@@ -207,7 +209,7 @@ class AsyncCouch(object):
                            'more docs')
         # make list of docs to mark as deleted
         deleted = [{'_id': doc['_id'], '_rev': doc['_rev'],
-                '_deleted': True} for doc in docs]
+                    '_deleted': True} for doc in docs]
         # use bulk docs API to update the docs
         url = '/{0}/_bulk_docs'.format(self.db_name)
         body = json_encode({'all_or_nothing': all_or_nothing,
@@ -265,8 +267,9 @@ class AsyncCouch(object):
             raise KeyError('Missing id or revision information in doc')
         else:
             url = '/{0}/{1}/{2}?rev={3}'.format(self.db_name,
-                    url_escape(doc['_id']), url_escape(attachment_name),
-                    doc['_rev'])
+                                                url_escape(doc['_id']), url_escape(
+                                                    attachment_name),
+                                                doc['_rev'])
         r = yield self._http_delete(url)
         raise gen.Return(r)
 
@@ -333,7 +336,7 @@ class AsyncCouch(object):
           inclusive_end=false
         """
         url = '/{0}/_design/{1}/_view/{2}'.format(self.db_name,
-                design_doc_name, view_name)
+                                                  design_doc_name, view_name)
         r = yield self._view(url, **kwargs)
         raise gen.Return(r)
 
@@ -390,12 +393,12 @@ class AsyncCouch(object):
             for item in obj:
                 if 'error' in item:
                     raise relax_exception(httpclient.HTTPError(
-                            resp.code if item['error'] != 'not_found' else 404,
-                            item['reason'], resp))
+                        resp.code if item['error'] != 'not_found' else 404,
+                        item['reason'], resp))
 
         elif 'error' in obj:
             raise relax_exception(httpclient.HTTPError(resp.code,
-                    obj['reason'], resp))
+                                                       obj['reason'], resp))
 
         elif 'rows' in obj:
             # check if there is an error in the result rows,
@@ -403,12 +406,12 @@ class AsyncCouch(object):
             for row in obj['rows']:
                 if 'error' in row:
                     raise relax_exception(httpclient.HTTPError(
-                            resp.code if row['error'] != 'not_found' else 404,
-                            row['error'], resp))
+                        resp.code if row['error'] != 'not_found' else 404,
+                        row['error'], resp))
         return obj
-    
+
     def _parse_headers(self, resp):
-        headers = {"code":resp.code}
+        headers = {"code": resp.code}
         headers.update(resp.headers)
         return headers
 
@@ -435,7 +438,7 @@ class AsyncCouch(object):
                 raise relax_exception(e)
             resp = e.response
         raise gen.Return(self._parse_response(resp) if decode else resp.body)
-        
+
     @gen.coroutine
     def _http_post(self, uri, body, **kwargs):
         if self._closed:
@@ -443,8 +446,8 @@ class AsyncCouch(object):
         req_args = copy.deepcopy(self.request_args)
         req_args.update(kwargs)
         req_args.setdefault('headers', {}).update({
-                'Accept': 'application/json',
-                'Content-Type': 'application/json'})
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'})
         req = httpclient.HTTPRequest(self.couch_url + uri, method='POST',
                                      body=body, **req_args)
         try:
@@ -483,7 +486,7 @@ class AsyncCouch(object):
             raise CouchException('Database connection is closed.')
         req_args = copy.deepcopy(self.request_args)
         req_args.setdefault('headers', {}).update({
-                'Accept': 'application/json'})
+            'Accept': 'application/json'})
         req = httpclient.HTTPRequest(self.couch_url + uri, method='DELETE',
                                      **req_args)
         try:
@@ -499,8 +502,9 @@ class AsyncCouch(object):
         if self._closed:
             raise CouchException('Database connection is closed.')
         req_args = copy.deepcopy(self.request_args)
-        req = httpclient.HTTPRequest(urljoin(self.couch_url,uri), method='HEAD',
-                                     **req_args)
+        req = httpclient.HTTPRequest(
+            urljoin(self.couch_url, uri), method='HEAD',
+            **req_args)
         try:
             resp = yield self._client.fetch(req)
         except httpclient.HTTPError as e:
@@ -509,7 +513,9 @@ class AsyncCouch(object):
             resp = e.response
         raise gen.Return(self._parse_headers(resp))
 
+
 class BlockingCouch(AsyncCouch):
+
     """Basic wrapper class for blocking operations on a CouchDB.
 
     Example usage::
@@ -580,61 +586,77 @@ class BlockingCouch(AsyncCouch):
 
 
 class CouchException(httpclient.HTTPError):
+
     """Base class for Couch specific exceptions"""
+
     def __init__(self, HTTPError, msg=None):
         httpclient.HTTPError.__init__(self, HTTPError.code,
-                msg, HTTPError.response)
+                                      msg, HTTPError.response)
 
 
 class NotModified(CouchException):
+
     """HTTP Error 304 (Not Modified)"""
+
     def __init__(self, HTTPError):
         CouchException.__init__(self, HTTPError,
-                'The document has not been modified since the last update.')
+                                'The document has not been modified since the last update.')
 
 
 class BadRequest(CouchException):
+
     """HTTP Error 400 (Bad Request)"""
+
     def __init__(self, HTTPError):
         CouchException.__init__(self, HTTPError, 'The syntax of the request '
-                'was invalid or could not be processed.')
+                                'was invalid or could not be processed.')
 
 
 class NotFound(CouchException):
+
     """HTTP Error 404 (Not Found)"""
+
     def __init__(self, HTTPError):
         CouchException.__init__(self, HTTPError,
-                'The requested resource was not found.')
+                                'The requested resource was not found.')
 
 
 class MethodNotAllowed(CouchException):
+
     """HTTP Error 405 (Method Not Allowed)"""
+
     def __init__(self, HTTPError):
         CouchException.__init__(self, HTTPError, 'The request was made using '
-                'an incorrect request method; for example, a GET was used '
-                'where a POST was required.')
+                                'an incorrect request method; for example, a GET was used '
+                                'where a POST was required.')
 
 
 class Conflict(CouchException):
+
     """HTTP Error 409 (Conflict)"""
+
     def __init__(self, HTTPError):
         CouchException.__init__(self, HTTPError, 'The request failed because '
-                'of a database conflict.')
+                                'of a database conflict.')
 
 
 class PreconditionFailed(CouchException):
+
     """HTTP Error 412 (Precondition Failed)"""
+
     def __init__(self, HTTPError):
         CouchException.__init__(self, HTTPError, 'Could not create database - '
-                'a database with that name already exists.')
+                                'a database with that name already exists.')
 
 
 class InternalServerError(CouchException):
+
     """HTTP Error 500 (Internal Server Error)"""
+
     def __init__(self, HTTPError):
         CouchException.__init__(self, HTTPError, 'The request was invalid and '
-                'failed, or an error occurred within the CouchDB server that '
-                'prevented it from processing the request.')
+                                'failed, or an error occurred within the CouchDB server that '
+                                'prevented it from processing the request.')
 
 
 def relax_exception(e):
