@@ -56,6 +56,14 @@ def run_blocking_tests():
     except couch.CouchException:
         pass
 
+    # has doc
+    resp = db.has_doc(doc1['_id'])
+    assert resp, "Failed on getting head of doc"
+
+    # has doc on non-existing doc
+    resp = db.has_doc('a')
+    assert not resp, "Failed on getting head of non-existing doc"
+    
     # get doc
     resp = db.get_doc(doc1['_id'])
     assert doc1 == resp, 'Failed to get doc'
@@ -214,6 +222,14 @@ def run_async_tests():
     except couch.NotFound:
         pass
 
+    # has doc
+    resp = yield db.has_doc(doc1['_id'])
+    assert resp, "Failed to get doc HEAD"    
+        
+    # has doc on non-existing doc
+    resp = yield db.has_doc('a')
+    assert not resp, "Has a non-existing doc"
+    
     # save docs
     doc1['msg2'] = 'Another message'
     resp = yield db.save_docs([doc1, doc2])

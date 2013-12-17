@@ -14,12 +14,17 @@ __version__ = '0.2.1'
 
 import copy
 import functools
+try:
+    from urlparse import urljoin
+except ImportError:
+    from urllib.request import urljoin
 
 import tornado.ioloop
 from tornado import httpclient, gen
 
 from tornado.escape import json_decode, json_encode, url_escape
 
+JSON_MIME_TYPE = 'application/json'
 
 class AsyncCouch(object):
     """Basic wrapper class for asynchronous operations on a CouchDB
@@ -134,6 +139,13 @@ class AsyncCouch(object):
         url = '/{0}/{1}'.format(self.db_name, url_escape(doc_id))
         r = yield self._http_get(url)
         raise gen.Return(r)
+
+    @gen.coroutine
+    def has_doc(self, doc_id):
+        """Get document with the given `doc_id`."""
+        url = '/'.join((self.db_name, url_escape(doc_id)))
+        r = yield self._http_head(url)
+        raise gen.Return(True if r['code'] == 200 else False)
 
     @gen.coroutine
     def get_docs(self, doc_ids):
@@ -394,6 +406,11 @@ class AsyncCouch(object):
                             resp.code if row['error'] != 'not_found' else 404,
                             row['error'], resp))
         return obj
+    
+    def _parse_headers(self, resp):
+        headers = {"code":resp.code}
+        headers.update(resp.headers)
+        return headers
 
     @gen.coroutine
     def _http_get(self, uri, headers=None):
@@ -477,6 +494,20 @@ class AsyncCouch(object):
             resp = e.response
         raise gen.Return(self._parse_response(resp))
 
+    @gen.coroutine
+    def _http_head(self, uri):
+        if self._closed:
+            raise CouchException('Database connection is closed.')
+        req_args = copy.deepcopy(self.request_args)
+        req = httpclient.HTTPRequest(urljoin(self.couch_url,uri), method='HEAD',
+                                     **req_args)
+        try:
+            resp = yield self._client.fetch(req)
+        except httpclient.HTTPError as e:
+            if not e.response:
+                raise relax_exception(e)
+            resp = e.response
+        raise gen.Return(self._parse_headers(resp))
 
 class BlockingCouch(AsyncCouch):
     """Basic wrapper class for blocking operations on a CouchDB.
