@@ -9,7 +9,7 @@ __all__ = ["BlockingCouch", "AsyncCouch", "CouchException", "NotModified",
            "BadRequest", "NotFound", "MethodNotAllowed", "Conflict",
            "PreconditionFailed", "InternalServerError"]
 
-__version__ = '0.2.1'
+__version__ = '0.2.2'
 
 
 import copy
@@ -144,10 +144,13 @@ class AsyncCouch(object):
 
     @gen.coroutine
     def has_doc(self, doc_id):
-        """Get document with the given `doc_id`."""
+        """
+        See whether given doc_id existed in then given database.
+        Return True/False
+        """
         url = '/'.join((self.db_name, url_escape(doc_id)))
         r = yield self._http_head(url)
-        raise gen.Return(True if r['code'] == 200 else False)
+        raise gen.Return(r['code'] == 200)
 
     @gen.coroutine
     def get_docs(self, doc_ids):
