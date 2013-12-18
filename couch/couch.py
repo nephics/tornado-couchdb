@@ -142,7 +142,7 @@ class AsyncCouch(object):
         See whether given doc_id existed in then given database.
         Return True/False
         """
-        url = '/'.join((self.db_name, url_escape(doc_id)))
+        url = '/{0}/{1}'.format(self.db_name, url_escape(doc_id))
         r = yield self._http_head(url)
         raise gen.Return(r['code'] == 200)
 
