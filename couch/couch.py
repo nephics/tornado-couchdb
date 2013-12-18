@@ -140,6 +140,16 @@ class AsyncCouch(object):
         raise gen.Return(r)
 
     @gen.coroutine
+    def has_doc(self, doc_id):
+        """
+        See whether given doc_id existed in then given database.
+        Return True/False
+        """
+        url = '{0}/{1}'.format(self.db_name, url_escape(doc_id))
+        r = yield self._http_head(url)
+        raise gen.Return(r['code'] == 200)
+
+    @gen.coroutine
     def get_docs(self, doc_ids):
         """Get multiple documents with the given list of `doc_ids`.
 
@@ -399,6 +409,11 @@ class AsyncCouch(object):
                         row['error'], resp))
         return obj
 
+    def _parse_headers(self, resp):
+        headers = {"code": resp.code}
+        headers.update(resp.headers)
+        return headers
+
     def _test_closed(self):
         if self._closed:
             raise CouchException('Database connection is closed.')
@@ -481,6 +496,21 @@ class AsyncCouch(object):
             resp = e.response
         raise gen.Return(self._parse_response(resp))
 
+    @gen.coroutine
+    def _http_head(self, uri):
+        if self._closed:
+            raise CouchException('Database connection is closed.')
+        req_args = copy.deepcopy(self.request_args)
+        req = httpclient.HTTPRequest(self.couch_url + uri, method='HEAD',
+            **req_args)
+        try:
+            resp = yield self._client.fetch(req)
+        except httpclient.HTTPError as e:
+            if not e.response:
+                raise relax_exception(e)
+            resp = e.response
+        raise gen.Return(self._parse_headers(resp))
+
 
 class BlockingCouch(AsyncCouch):
     """Basic wrapper class for blocking operations on a CouchDB.
@@ -554,6 +584,7 @@ class BlockingCouch(AsyncCouch):
 
 class CouchException(httpclient.HTTPError):
     """Base class for Couch specific exceptions"""
+
     def __init__(self, HTTPError, msg=None):
         httpclient.HTTPError.__init__(
             self, HTTPError.code, msg, HTTPError.response)
@@ -561,6 +592,7 @@ class CouchException(httpclient.HTTPError):
 
 class NotModified(CouchException):
     """HTTP Error 304 (Not Modified)"""
+
     def __init__(self, HTTPError):
         CouchException.__init__(
             self, HTTPError,
@@ -569,6 +601,7 @@ class NotModified(CouchException):
 
 class BadRequest(CouchException):
     """HTTP Error 400 (Bad Request)"""
+
     def __init__(self, HTTPError):
         CouchException.__init__(
             self, HTTPError,
@@ -577,6 +610,7 @@ class BadRequest(CouchException):
 
 class NotFound(CouchException):
     """HTTP Error 404 (Not Found)"""
+
     def __init__(self, HTTPError):
         CouchException.__init__(
             self, HTTPError, 'The requested resource was not found.')
@@ -584,6 +618,7 @@ class NotFound(CouchException):
 
 class MethodNotAllowed(CouchException):
     """HTTP Error 405 (Method Not Allowed)"""
+
     def __init__(self, HTTPError):
         CouchException.__init__(
             self, HTTPError, 'The request was made using an incorrect request '
@@ -592,6 +627,7 @@ class MethodNotAllowed(CouchException):
 
 class Conflict(CouchException):
     """HTTP Error 409 (Conflict)"""
+
     def __init__(self, HTTPError):
         CouchException.__init__(
             self, HTTPError,
@@ -600,6 +636,7 @@ class Conflict(CouchException):
 
 class PreconditionFailed(CouchException):
     """HTTP Error 412 (Precondition Failed)"""
+
     def __init__(self, HTTPError):
         CouchException.__init__(
             self, HTTPError, 'Could not create database - '
@@ -608,6 +645,7 @@ class PreconditionFailed(CouchException):
 
 class InternalServerError(CouchException):
     """HTTP Error 500 (Internal Server Error)"""
+
     def __init__(self, HTTPError):
         CouchException.__init__(
             self, HTTPError, 'The request was invalid and failed, '

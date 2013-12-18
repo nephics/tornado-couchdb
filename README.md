@@ -120,6 +120,10 @@ Document related methods.
         If one or more documents are not found in the database, a NotFound
         exception is raised.
 
+    has_doc(self, doc_id):
+        See whether given `doc_id` existed in then given database.
+        Return True/False
+
     save_doc(self, doc):
         Save/create a document to/in a given database. Response is a dict
         with id and rev of the saved doc.
