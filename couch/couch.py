@@ -141,9 +141,8 @@ class AsyncCouch(object):
 
     @gen.coroutine
     def has_doc(self, doc_id):
-        """
-        See whether given doc_id existed in then given database.
-        Return True/False
+        """Check if document with the given `doc_id` exists.
+        Returns True if document exists, returns False otherwise.
         """
         url = '{0}/{1}'.format(self.db_name, url_escape(doc_id))
         r = yield self._http_head(url)
@@ -193,7 +192,9 @@ class AsyncCouch(object):
 
     @gen.coroutine
     def delete_doc(self, doc):
-        """Delete a document."""
+        """Delete a document.
+        The `doc` shall be a dict, at least having the keys `_id` and `_rev`.
+        """
         if '_rev' not in doc or '_id' not in doc:
             raise KeyError('Missing id or revision information in doc')
         url = '{0}/{1}?rev={2}'.format(
@@ -203,7 +204,10 @@ class AsyncCouch(object):
 
     @gen.coroutine
     def delete_docs(self, docs, all_or_nothing=False):
-        """Delete multiple documents."""
+        """Delete multiple documents.
+        The `docs` shall be an array of dicts, each at least having the keys
+        `_id` and `_rev`.
+        """
         if any('_rev' not in doc or '_id' not in doc for doc in docs):
             raise KeyError('Missing id or revision information in one or '
                            'more docs')
@@ -297,12 +301,12 @@ class AsyncCouch(object):
           limit=<number of docs>
 
         Prevent CouchDB from refreshing a stale view:
-          stale='ok'
-          stale='update_after'
+          stale="ok"
+          stale="update_after"
 
         Reverse the output:
-          descending=true
-          descending=false  (default value)
+          descending=True
+          descending=False  (default value)
 
         Note that the descending option is applied before any key filtering, so
         you may need to swap the values of the startkey and endkey options to
@@ -313,26 +317,26 @@ class AsyncCouch(object):
 
         The group option controls whether the reduce function reduces to a set
         of distinct keys or to a single result row:
-          group=true
-          group=false  (default value)
+          group=True
+          group=False  (default value)
 
           group_level=<number>
 
         Use the reduce function of the view:
-          reduce=true  (default value)
-          reduce=false
+          reduce=True  (default value)
+          reduce=False
 
-        Note that default value of reduce is true, only if a reduce function is
+        Note that default value of reduce is True, only if a reduce function is
         defined for the view.
 
         Automatically fetch and include the document which emitted each view
         entry:
-          include_docs=true
-          include_docs=false  (default value)
+          include_docs=True
+          include_docs=False  (default value)
 
         Determine whether the endkey is included in the result:
-          inclusive_end=true  (default value)
-          inclusive_end=false
+          inclusive_end=True  (default value)
+          inclusive_end=False
         """
         url = '{0}/_design/{1}/_view/{2}'.format(
             self.db_name, design_doc_name, view_name)

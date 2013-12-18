@@ -121,8 +121,8 @@ Document related methods.
         exception is raised.
 
     has_doc(self, doc_id):
-        See whether given `doc_id` existed in then given database.
-        Return True/False
+        Check if document with the given `doc_id` exists.
+        Returns True if document exists, returns False otherwise.
 
     save_doc(self, doc):
         Save/create a document to/in a given database. Response is a dict
@@ -134,9 +134,12 @@ Document related methods.
 
     delete_doc(self, doc):
         Delete a document
-    
+        The `doc` shall be a dict, at least having the keys `_id` and `_rev`.
+
     delete_docs(self, docs, all_or_nothing=False):
         Delete multiple documents
+        The `docs` shall be an array of dicts, each at least having the keys
+        `_id` and `_rev`.
 
     get_attachment(self, doc, attachment_name, mimetype=None):
         Get document attachment.
@@ -147,7 +150,7 @@ Document related methods.
     save_attachment(self, doc, attachment):
         Save an attachment to the specified doc.
         The attachment shall be a dict with keys: `mimetype`, `name`, `data`.
-        The doc shall be a dict, at least having the key `_id`, and if doc is
+        The `doc` shall be a dict, at least having the key `_id`, and if doc is
         existing in the database, it shall also contain the key `_rev`
 
     delete_attachment(self, doc, attachment_name):
@@ -178,12 +181,12 @@ Document related methods.
           limit=<number of docs>
         
         Prevent CouchDB from refreshing a stale view:
-          stale='ok'
-          stale='update_after'
+          stale="ok"
+          stale="update_after"
         
         Reverse the output:
-          descending=true
-          descending=false  (default value)
+          descending=True
+          descending=False  (default value)
         
         Note that the descending option is applied before any key filtering, so
         you may need to swap the values of the startkey and endkey options to
@@ -194,26 +197,26 @@ Document related methods.
         
         The group option controls whether the reduce function reduces to a set
         of distinct keys or to a single result row:
-          group=true
-          group=false  (default value)
+          group=True
+          group=False  (default value)
         
           group_level=<number>
         
         Use the reduce function of the view:
-          reduce=true  (default value)
-          reduce=false
+          reduce=True  (default value)
+          reduce=False
         
-        Note that default value of reduce is true, only if a reduce function is
+        Note that default value of reduce is True, only if a reduce function is
         defined for the view.
         
         Automatically fetch and include the document which emitted each view
         entry:
-          include_docs=true
-          include_docs=false  (default value)
+          include_docs=True
+          include_docs=False  (default value)
         
         Determine whether the endkey is included in the result:
-          inclusive_end=true  (default value)
-          inclusive_end=false
+          inclusive_end=True  (default value)
+          inclusive_end=False
     
     view_all_docs(self, **kwargs):
         Query the _all_docs view.
