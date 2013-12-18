@@ -499,8 +499,7 @@ class AsyncCouch(object):
         if self._closed:
             raise CouchException('Database connection is closed.')
         req_args = copy.deepcopy(self.request_args)
-        req = httpclient.HTTPRequest(
-            urljoin(self.couch_url, uri), method='HEAD',
+        req = httpclient.HTTPRequest(self.couch_url + uri, method='HEAD',
             **req_args)
         try:
             resp = yield self._client.fetch(req)
@@ -583,7 +582,6 @@ class BlockingCouch(AsyncCouch):
 
 
 class CouchException(httpclient.HTTPError):
-
     """Base class for Couch specific exceptions"""
 
     def __init__(self, HTTPError, msg=None):
@@ -592,7 +590,6 @@ class CouchException(httpclient.HTTPError):
 
 
 class NotModified(CouchException):
-
     """HTTP Error 304 (Not Modified)"""
 
     def __init__(self, HTTPError):
@@ -602,7 +599,6 @@ class NotModified(CouchException):
 
 
 class BadRequest(CouchException):
-
     """HTTP Error 400 (Bad Request)"""
 
     def __init__(self, HTTPError):
@@ -612,7 +608,6 @@ class BadRequest(CouchException):
 
 
 class NotFound(CouchException):
-
     """HTTP Error 404 (Not Found)"""
 
     def __init__(self, HTTPError):
@@ -621,7 +616,6 @@ class NotFound(CouchException):
 
 
 class MethodNotAllowed(CouchException):
-
     """HTTP Error 405 (Method Not Allowed)"""
 
     def __init__(self, HTTPError):
@@ -631,7 +625,6 @@ class MethodNotAllowed(CouchException):
 
 
 class Conflict(CouchException):
-
     """HTTP Error 409 (Conflict)"""
 
     def __init__(self, HTTPError):
@@ -641,7 +634,6 @@ class Conflict(CouchException):
 
 
 class PreconditionFailed(CouchException):
-
     """HTTP Error 412 (Precondition Failed)"""
 
     def __init__(self, HTTPError):
@@ -651,7 +643,6 @@ class PreconditionFailed(CouchException):
 
 
 class InternalServerError(CouchException):
-
     """HTTP Error 500 (Internal Server Error)"""
 
     def __init__(self, HTTPError):
