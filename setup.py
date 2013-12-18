@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name='tornado-couchdb',
-    version='0.2.1',
+    version='0.2.1+',
     description="Blocking and non-blocking (asynchronous) clients for CouchDB using Tornado's httpclient",
     author='Jacob Sondergaard',
     author_email='jacob@nephics.com',

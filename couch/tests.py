@@ -134,7 +134,8 @@ def run_blocking_tests():
 
     # view
     resp = db.view('test', 'msg')
-    assert [doc1['_id'], doc2['_id']] == [row['key'] for row in resp['rows']], \
+    assert [doc1['_id'], doc2['_id']] == \
+        [row['key'] for row in resp['rows']], \
         'Failed to get view results from design doc'
 
     # delete doc
@@ -294,7 +295,7 @@ def run_async_tests():
     # view
     resp = yield db.view('test', 'msg')
     assert [doc1['_id'], doc2['_id']] == \
-           [row['key'] for row in resp['rows']], \
+        [row['key'] for row in resp['rows']], \
         'Failed to get view results from design doc'
 
     # delete doc
