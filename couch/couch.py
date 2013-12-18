@@ -23,7 +23,6 @@ from tornado.escape import json_decode, json_encode, url_escape
 
 
 class AsyncCouch(object):
-
     """Basic wrapper class for asynchronous operations on a CouchDB
 
     Example usage::
@@ -511,7 +510,6 @@ class AsyncCouch(object):
 
 
 class BlockingCouch(AsyncCouch):
-
     """Basic wrapper class for blocking operations on a CouchDB.
 
     Example usage::
