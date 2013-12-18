@@ -47,7 +47,7 @@ class AsyncCouch(object):
     yielding to a Future (using gen.coroutine).
     """
 
-    def __init__(self, db_name='', couch_url='http://127.0.0.1:5984',
+    def __init__(self, db_name='', couch_url='http://127.0.0.1:5984/',
                  io_loop=None, **request_args):
         """Creates an `AsyncCouch`.
 
@@ -68,7 +68,10 @@ class AsyncCouch(object):
         """
         self.request_args = request_args
         self._client = httpclient.AsyncHTTPClient(io_loop)
-        self.couch_url = couch_url
+        if couch_url.endswith('/'):
+            self.couch_url = couch_url
+        else:
+            self.couch_url = couch_url + '/'
         self.db_name = db_name
         self._closed = False
 
@@ -85,25 +88,25 @@ class AsyncCouch(object):
     @gen.coroutine
     def create_db(self, db_name=None):
         """Creates a new database."""
-        r = yield self._http_put('/' + (db_name or self.db_name))
+        r = yield self._http_put(db_name or self.db_name)
         raise gen.Return(r)
 
     @gen.coroutine
     def delete_db(self, db_name=None):
         """Deletes the database."""
-        r = yield self._http_delete('/' + (db_name or self.db_name))
+        r = yield self._http_delete(db_name or self.db_name)
         raise gen.Return(r)
 
     @gen.coroutine
     def list_dbs(self):
         """List names of databases."""
-        r = yield self._http_get('/_all_dbs')
+        r = yield self._http_get('_all_dbs')
         raise gen.Return(r)
 
     @gen.coroutine
     def info_db(self, db_name=None):
         """Get info about the database."""
-        r = yield self._http_get('/' + (db_name or self.db_name))
+        r = yield self._http_get(db_name or self.db_name)
         raise gen.Return(r)
 
     @gen.coroutine
@@ -116,13 +119,13 @@ class AsyncCouch(object):
             'target': (db_name or self.db_name),
             'create_target': create_target
         })
-        r = yield self._http_post('/_replicate', body, request_timeout=120.0)
+        r = yield self._http_post('_replicate', body, request_timeout=120.0)
         raise gen.Return(r)
 
     @gen.coroutine
     def uuids(self, count=1):
         """Get one or more uuids."""
-        r = yield self._http_get('/_uuids?count={0}'.format(count))
+        r = yield self._http_get('_uuids?count={0}'.format(count))
         raise gen.Return(r['uuids'])
 
     #
@@ -132,7 +135,7 @@ class AsyncCouch(object):
     @gen.coroutine
     def get_doc(self, doc_id):
         """Get document with the given `doc_id`."""
-        url = '/{0}/{1}'.format(self.db_name, url_escape(doc_id))
+        url = '{0}/{1}'.format(self.db_name, url_escape(doc_id))
         r = yield self._http_get(url)
         raise gen.Return(r)
 
@@ -146,7 +149,7 @@ class AsyncCouch(object):
         If one or more documents are not found in the database, a NotFound
         exception is raised.
         """
-        url = '/{0}/_all_docs?include_docs=true'.format(self.db_name)
+        url = '{0}/_all_docs?include_docs=true'.format(self.db_name)
         body = json_encode({'keys': doc_ids})
         r = yield self._http_post(url, body)
         raise gen.Return([row['doc'] for row in r['rows']])
@@ -159,11 +162,11 @@ class AsyncCouch(object):
         body = json_encode(doc)
         if '_id' in doc and '_rev' in doc:
             # update an existing document
-            url = '/{0}/{1}'.format(self.db_name, url_escape(doc['_id']))
+            url = '{0}/{1}'.format(self.db_name, url_escape(doc['_id']))
             r = yield self._http_put(url, body)
         else:
             # save a new document
-            url = '/' + self.db_name
+            url = self.db_name
             r = yield self._http_post(url, body)
         raise gen.Return(r)
 
@@ -173,7 +176,7 @@ class AsyncCouch(object):
         Response is a list of dicts with id and rev of the saved docs.
         """
         # use bulk docs API to update the docs
-        url = '/{0}/_bulk_docs'.format(self.db_name)
+        url = '{0}/_bulk_docs'.format(self.db_name)
         body = json_encode({'all_or_nothing': all_or_nothing, 'docs': docs})
         r = yield self._http_post(url, body)
         raise gen.Return(r)
@@ -183,7 +186,7 @@ class AsyncCouch(object):
         """Delete a document."""
         if '_rev' not in doc or '_id' not in doc:
             raise KeyError('Missing id or revision information in doc')
-        url = '/{0}/{1}?rev={2}'.format(
+        url = '{0}/{1}?rev={2}'.format(
             self.db_name, url_escape(doc['_id']), doc['_rev'])
         r = yield self._http_delete(url)
         raise gen.Return(r)
@@ -198,7 +201,7 @@ class AsyncCouch(object):
         deleted = [{'_id': doc['_id'], '_rev': doc['_rev'],
                     '_deleted': True} for doc in docs]
         # use bulk docs API to update the docs
-        url = '/{0}/_bulk_docs'.format(self.db_name)
+        url = '{0}/_bulk_docs'.format(self.db_name)
         body = json_encode({'all_or_nothing': all_or_nothing,
                             'docs': deleted})
         r = yield self._http_post(url, body)
@@ -222,8 +225,8 @@ class AsyncCouch(object):
                                  ' the given name')
             else:
                 mimetype = doc['_attachments'][attachment_name]['content_type']
-        url = '/{0}/{1}/{2}'.format(self.db_name, url_escape(doc['_id']),
-                                    url_escape(attachment_name))
+        url = '{0}/{1}/{2}'.format(self.db_name, url_escape(doc['_id']),
+                                   url_escape(attachment_name))
         headers = {'Accept': mimetype}
         r = yield self._http_get(url, headers=headers)
         raise gen.Return(r)
@@ -237,7 +240,7 @@ class AsyncCouch(object):
         if any(key not in attachment for key in ['mimetype', 'name', 'data']):
             raise KeyError('Attachment dict is missing one or more '
                            'required keys')
-        url = '/{0}/{1}/{2}{3}'.format(
+        url = '{0}/{1}/{2}{3}'.format(
             self.db_name, url_escape(doc['_id']),
             url_escape(attachment['name']),
             '?rev={0}'.format(doc['_rev']) if '_rev' in doc else '')
@@ -253,7 +256,7 @@ class AsyncCouch(object):
         if '_rev' not in doc or '_id' not in doc:
             raise KeyError('Missing id or revision information in doc')
         else:
-            url = '/{0}/{1}/{2}?rev={3}'.format(
+            url = '{0}/{1}/{2}?rev={3}'.format(
                 self.db_name, url_escape(doc['_id']),
                 url_escape(attachment_name), doc['_rev'])
         r = yield self._http_delete(url)
@@ -321,7 +324,7 @@ class AsyncCouch(object):
           inclusive_end=true  (default value)
           inclusive_end=false
         """
-        url = '/{0}/_design/{1}/_view/{2}'.format(
+        url = '{0}/_design/{1}/_view/{2}'.format(
             self.db_name, design_doc_name, view_name)
         r = yield self._view(url, **kwargs)
         raise gen.Return(r)
@@ -331,7 +334,7 @@ class AsyncCouch(object):
         """Query the _all_docs view.
         Accepts the same keyword parameters as `view()`.
         """
-        url = '/{0}/_all_docs'.format(self.db_name)
+        url = '{0}/_all_docs'.format(self.db_name)
         r = yield self._view(url, **kwargs)
         raise gen.Return(r)
 
@@ -340,7 +343,7 @@ class AsyncCouch(object):
         """Query a temporary view.
         The view_doc parameter is a dict with the view's map and reduce
         functions."""
-        url = '/{0}/_temp_view'.format(self.db_name)
+        url = '{0}/_temp_view'.format(self.db_name)
         r = yield self._view(url, body=view_doc, **kwargs)
         raise gen.Return(r)
 
@@ -499,7 +502,7 @@ class BlockingCouch(AsyncCouch):
     seperate IOLoop.
     """
 
-    def __init__(self, db_name='', couch_url='http://127.0.0.1:5984',
+    def __init__(self, db_name='', couch_url='http://127.0.0.1:5984/',
                  **request_args):
         """Creates a `BlockingCouch`.
 
