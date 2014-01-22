@@ -250,5 +250,5 @@ The following exception classes are used for the various database call errors:
 
 ## License
 
-Copyright (c) 2010-2013 Nephics AB  
+Copyright (c) 2010-2014 Nephics AB  
 MIT License, see the LICENSE file.
