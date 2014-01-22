@@ -169,12 +169,12 @@ class AsyncCouch(object):
         with id and rev of the saved doc.
         """
         body = json_encode(doc)
-        if '_id' in doc and '_rev' in doc:
-            # update an existing document
+        if '_id' in doc:
+            # create new document, or update an existing document
             url = '{0}/{1}'.format(self.db_name, url_escape(doc['_id']))
             r = yield self._http_put(url, body)
         else:
-            # save a new document
+            # create a new document
             url = self.db_name
             r = yield self._http_post(url, body)
         raise gen.Return(r)
