@@ -6,7 +6,7 @@ This Python module wraps the CouchDB HTTP REST API and defines a common interfac
 
 Install using `pip`:
 
-    pip install https://bitbucket.org/nephics/tornado-couchdb/get/default.zip
+    pip install tornado-couchdb
 
 The code has been tested with Python 3.3 and 2.7.
 
