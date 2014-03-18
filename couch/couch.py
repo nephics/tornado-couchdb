@@ -10,7 +10,7 @@ __all__ = ["BlockingCouch", "AsyncCouch", "CouchException", "NotModified",
            "BadRequest", "NotFound", "MethodNotAllowed", "Conflict",
            "PreconditionFailed", "InternalServerError"]
 
-__version__ = '0.2.2'
+__version__ = '0.2.2+'
 
 
 import copy
@@ -54,26 +54,38 @@ class AsyncCouch(object):
         All parameters are optional. Though `db_name` is required for most
         methods to work.
 
-        :arg string db_name: Database name, may set on init and modified later
-            as the object attribute `db_name`.
-        :arg string couch_url: The url to the CouchDB including port number,
-            but without authentication credentials.
-        :arg IOLoop io_loop: the IOLoop to pass to the AsyncHTTPClient
-        :arg keyword request_args: Arguments applied when making requests to
-            the database. This may include `auth_username` and `auth_password`
-            for basic authentication. See `httpclient.HTTPRequest` for other
-            possible arguments.
-            By default `use_gzip` is True. Accessing a local CouchDB it may be
-            relevant to set `use_gzip` to False.
+        Database name `db_name` may be set on init and changed later by
+        `use()`. The url to the CouchDB including port number, with or
+        without authentication credentials.
+
+        The `io_loop` is passed to the AsyncHTTPClient, used for connecting.
+
+        Keyword arguments in `request_args` are applied when making requests
+        to the database. By default the request argument `use_gzip` is True.
+        Accessing a local CouchDB it may be relevant to set `use_gzip` to
+        False.
+
+        The request arguments may include `auth_username` and `auth_password`
+        for basic authentication. See `httpclient.HTTPRequest` for other
+        possible arguments.
         """
         self.request_args = request_args
-        self._client = httpclient.AsyncHTTPClient(io_loop)
+        self._closed = False
+        self.io_loop = io_loop
+        self._client = httpclient.AsyncHTTPClient(self.io_loop)
+        self.use(db_name, couch_url)
+
+    def use(self, db_name='', couch_url='http://127.0.0.1:5984/'):
+        """Set database name `db_name` and `couch_url`.
+
+        The `couch_url` should include port number and authentication
+        credentials as necessary.
+        """
+        self.db_name = db_name
         if couch_url.endswith('/'):
             self.couch_url = couch_url
         else:
             self.couch_url = couch_url + '/'
-        self.db_name = db_name
-        self._closed = False
 
     def close(self):
         """Closes the CouchDB client, freeing any resources used."""
@@ -543,27 +555,29 @@ class BlockingCouch(AsyncCouch):
         All parameters are optional. Though `db_name` is required for most
         methods to work.
 
-        :arg string db_name: Database name, may set on init and modified later
-            as the object attribute `db_name`.
-        :arg string couch_url: The url to the CouchDB including port number,
-            but without authentication credentials.
-        :arg keyword request_args: Arguments applied when making requests to
-            the database. This may include `auth_username` and `auth_password`
-            for basic authentication. See `httpclient.HTTPRequest` for other
-            possible arguments.
-            By default `use_gzip` is True. Accessing a local CouchDB it may be
-            relevant to set `use_gzip` to False.
+        Database name `db_name` may be set on init and changed later by
+        `use()`. The url to the CouchDB including port number, with or
+        without authentication credentials.
+
+        Keyword arguments in `request_args` are applied when making requests
+        to the database. By default the request argument `use_gzip` is True.
+        Accessing a local CouchDB it may be relevant to set `use_gzip` to
+        False.
+
+        The request arguments may include `auth_username` and `auth_password`
+        for basic authentication. See `httpclient.HTTPRequest` for other
+        possible arguments.
         """
 
-        self._io_loop = tornado.ioloop.IOLoop()
-        AsyncCouch.__init__(self, db_name, couch_url, io_loop=self._io_loop,
+        io_loop = tornado.ioloop.IOLoop()
+        AsyncCouch.__init__(self, db_name, couch_url, io_loop=io_loop,
                             **request_args)
 
     def close(self):
         """Closes the CouchDB client, freeing any resources used."""
         if not self._closed:
             AsyncCouch.close(self)
-            self._io_loop.close()
+            self.io_loop.close()
 
     def __getattribute__(self, name):
         try:
@@ -582,7 +596,7 @@ class BlockingCouch(AsyncCouch):
         # run in its own IOLoop
         def wrapper(clb, *args, **kwargs):
             fn = functools.partial(clb, *args, **kwargs)
-            return self._io_loop.run_sync(fn)
+            return self.io_loop.run_sync(fn)
         return functools.partial(wrapper, attr)
 
 
