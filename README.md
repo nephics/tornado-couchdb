@@ -83,7 +83,15 @@ Example error handling:
 Note: In versions before 0.2.0, if error occured in the database call,  AsyncCouch would pass the exception as a parameter to the callback function.
 
 
-## Database methods
+## BlockingCouch and AsyncCouch methods
+
+General methods.
+
+    use(self, db_name='', couch_url='http://127.0.0.1:5984/'):
+        Set database name `db_name` and `couch_url`.
+    
+    close(self):
+        Closes the CouchDB client, freeing any resources used.
 
 Database related methods.
 
