@@ -384,7 +384,9 @@ class AsyncCouch(object):
                 if key == 'keys':
                     body.update({'keys': value})
                 else:
-                    value = url_escape(json_encode(value))
+                    value = url_escape(
+                        value if key in ('startkey_docid', 'endkey_docid')
+                        else json_encode(value))
                     options.append('='.join([key, value]))
         if options:
             url = '{0}?{1}'.format(url, '&'.join(options))
