@@ -23,9 +23,11 @@ def find_version(*file_paths):
     raise RuntimeError("Unable to find version string.")
 
 
+version = find_version('couch', 'couch.py')
+
 setup(
     name='tornado-couchdb',
-    version=find_version('couch', 'couch.py'),
+    version=version,
     description="Blocking and non-blocking (asynchronous) clients for CouchDB using Tornado's httpclient",
     long_description=open('README.md').read(),
     author='Jacob Sondergaard',
@@ -40,5 +42,5 @@ setup(
     'Programming Language :: Python :: 2.7',
     'Programming Language :: Python :: 3'
     ],
-    download_url='https://bitbucket.org/nephics/tornado-couchdb/get/v0.2.2.tar.gz'
+    download_url='https://bitbucket.org/nephics/tornado-couchdb/get/v{0}.tar.gz'.format(version)
 )
