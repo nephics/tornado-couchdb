@@ -1,35 +1,52 @@
-# Blocking and non-blocking (asynchronous) clients for CouchDB using Tornado's httpclient
+Blocking and non-blocking (asynchronous) clients for CouchDB using Tornado's httpclient
+=======================================================================================
 
-This Python module wraps the CouchDB HTTP REST API and defines a common interface for making blocking and non-blocking operations on a CouchDB.
+This Python module wraps the CouchDB HTTP REST API and defines a common
+interface for making blocking and non-blocking operations on a CouchDB.
 
-## Install
+Install
+-------
 
-Install using `pip`:
+Install using ``pip``:
+
+::
 
     pip install tornado-couchdb
 
 The code has been tested with Python 3.3 and 2.7.
 
-## BlockingCouch
+BlockingCouch
+-------------
 
-The BlockingCouch class is a basic wrapper for making blocking operations on a CouchDB. Using this class implies that the Tornado eventloop is blocked on a database call, waiting for reply from the database.
+The BlockingCouch class is a basic wrapper for making blocking
+operations on a CouchDB. Using this class implies that the Tornado
+eventloop is blocked on a database call, waiting for reply from the
+database.
 
-Use this class when blocking the eventloop *is not* a problem, or when there is a *low latency connection* to the database, and the operations are "small", i.e., only takes short time (in the range of tens of miliseconds) to complete.
+Use this class when blocking the eventloop *is not* a problem, or when
+there is a *low latency connection* to the database, and the operations
+are "small", i.e., only takes short time (in the range of tens of
+miliseconds) to complete.
 
 Example usage:
 
+::
+
     import couch
-    
+
     db = couch.BlockingCouch('mytestdb')
     db.create_db()
     r = db.save_doc({'msg': 'My first document'})
     doc = db.get_doc(r['id'])
     db.delete_doc(doc)
 
-For any methods of this class: If an error is returned from the database,
-an exception is raised using an appropriate sub-class of CouchException.
+For any methods of this class: If an error is returned from the
+database, an exception is raised using an appropriate sub-class of
+CouchException.
 
 Example error handling:
+
+::
 
     import couch
 
@@ -39,14 +56,21 @@ Example error handling:
     except couch.NotFound:
         print('Document not found')
 
+AsyncCouch
+----------
 
-## AsyncCouch
+The AsyncCouch class is a basic wrapper for making non-blocking
+operations on a CouchDB. Using this class implies that the Tornado
+eventloop is *not* blocked on a database call, and reply from the
+database is returned as a Future or delivered to a callback function.
 
-The AsyncCouch class is a basic wrapper for making non-blocking operations on a CouchDB. Using this class implies that the Tornado eventloop is *not* blocked on  a database call, and reply from the database is returned as a Future or delivered to a callback function.
-
-Use this class when blocking the eventloop *is* a problem, or when there is a *high latency connection* to the database, and the operations are "large", i.e., takes long time (in the range of seconds) to complete.
+Use this class when blocking the eventloop *is* a problem, or when there
+is a *high latency connection* to the database, and the operations are
+"large", i.e., takes long time (in the range of seconds) to complete.
 
 Example usage with coroutine:
+
+::
 
     import couch
     from tornado import ioloop, gen
@@ -63,9 +87,13 @@ Example usage with coroutine:
     ioloop.IOLoop.run_sync(run_test)
 
 For any methods of this class: If the database call results in an error,
-an exception is raised at the callpoint using an appropriate sub-class of CouchException. This applies *both* when calling with a callback function and when yielding to a Future (using gen.coroutine).
+an exception is raised at the callpoint using an appropriate sub-class
+of CouchException. This applies *both* when calling with a callback
+function and when yielding to a Future (using gen.coroutine).
 
 Example error handling:
+
+::
 
     import couch
     from tornado import ioloop, gen
@@ -79,25 +107,31 @@ Example error handling:
              print('Document not found')
      
      ioloop.IOLoop.run_sync(main)
- 
-Note: In versions before 0.2.0, if error occured in the database call,  AsyncCouch would pass the exception as a parameter to the callback function.
 
+Note: In versions before 0.2.0, if error occured in the database call,
+AsyncCouch would pass the exception as a parameter to the callback
+function.
 
-## BlockingCouch and AsyncCouch methods
+BlockingCouch and AsyncCouch methods
+------------------------------------
 
 General methods.
 
+::
+
     use(self, db_name='', couch_url='http://127.0.0.1:5984/'):
         Set database name `db_name` and `couch_url`.
-    
+
     close(self):
         Closes the CouchDB client, freeing any resources used.
 
 Database related methods.
 
+::
+
     create_db(self, db_name=None):
         Creates a new database.
-    
+
     delete_db(self, db_name=None):
         Deletes the database.
 
@@ -116,9 +150,11 @@ Database related methods.
 
 Document related methods.
 
+::
+
     get_doc(self, doc_id):
         Get document with the given `doc_id`.
-    
+
     get_docs(self, doc_ids):
         Get multiple documents with the given list of `doc_ids`.
         
@@ -135,7 +171,7 @@ Document related methods.
     save_doc(self, doc):
         Save/create a document to/in a given database. Response is a dict
         with id and rev of the saved doc.
-    
+
     save_docs(self, docs, all_or_nothing=False):
         Save/create multiple documents.
         Response is a list of dicts with id and rev of the saved docs.
@@ -164,7 +200,7 @@ Document related methods.
     delete_attachment(self, doc, attachment_name):
         Delete a named attachment to the specified doc.
         The doc shall be a dict, at least with the keys: _id and _rev
-    
+
     view(self, design_doc_name, view_name, **kwargs):
         Query a pre-defined view in the specified design doc.
         The following query parameters can be specified as keyword arguments.
@@ -225,7 +261,7 @@ Document related methods.
         Determine whether the endkey is included in the result:
           inclusive_end=True  (default value)
           inclusive_end=False
-    
+
     view_all_docs(self, **kwargs):
         Query the _all_docs view.
         Accepts the same keyword parameters as `view()`.
@@ -235,28 +271,38 @@ Document related methods.
         The view_doc parameter is a dict with the view's map and reduce
         functions.
 
+Exceptions on database call errors
+----------------------------------
 
-## Exceptions on database call errors
+The following exception classes are used for the various database call
+errors:
 
-The following exception classes are used for the various database call errors:
+``CouchException``: Base class for CouchDB specific exceptions. It is a
+sub-class of ``tornado.httpclient.HTTPError``, and it therefore also
+contains the HTTP error message, response and error code.
 
-`CouchException`: Base class for CouchDB specific exceptions. It is a sub-class of `tornado.httpclient.HTTPError`, and it therefore also contains the HTTP error message, response and error code.
+``NotModified``: The document has not been modified since the last
+update.
 
-`NotModified`: The document has not been modified since the last update.
+``BadRequest``: The syntax of the request was invalid or could not be
+processed.
 
-`BadRequest`: The syntax of the request was invalid or could not be processed.
+``NotFound``: The requested resource was not found.
 
-`NotFound`: The requested resource was not found.
+``MethodNotAllowed``: The request was made using an incorrect request
+method; for example, a GET was used where a POST was required.
 
-`MethodNotAllowed`: The request was made using an incorrect request method; for example, a GET was used where a POST was required.
+``Conflict``: The request failed because of a database conflict.
 
-`Conflict`: The request failed because of a database conflict.
+``PreconditionFailed``: Could not create database - a database with that
+name already exists.
 
-`PreconditionFailed`: Could not create database - a database with that name already exists.
+``InternalServerError``: The request was invalid and failed, or an error
+occurred within the CouchDB server that prevented it from processing the
+request.
 
-`InternalServerError`: The request was invalid and failed, or an error occurred within the CouchDB server that prevented it from processing the request.
+License
+-------
 
-## License
-
-Copyright (c) 2010-2014 Nephics AB  
-MIT License, see the LICENSE file.
+| Copyright (c) 2010-2014 Nephics AB
+| MIT License, see the LICENSE file.

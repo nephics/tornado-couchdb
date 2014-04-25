@@ -25,7 +25,7 @@ def find_version(*file_paths):
 
 
 version = find_version('couch', 'couch.py')
-readme = 'README.md'
+readme = 'README.rst'
 long_description = open(readme).read() if os.path.exists(readme) else ''
 
 
