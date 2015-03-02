@@ -304,5 +304,5 @@ request.
 License
 -------
 
-| Copyright (c) 2010-2014 Nephics AB
+| Copyright (c) 2010-2015 Nephics AB
 | MIT License, see the LICENSE file.
