@@ -7,11 +7,12 @@ for making blocking and non-blocking operations on a CouchDB.
 
 import copy
 import functools
+import json
 
 import tornado.ioloop
 from tornado import httpclient, gen
 
-from tornado.escape import json_decode, json_encode, url_escape
+from tornado.escape import json_decode, url_escape
 
 
 __all__ = ["BlockingCouch", "AsyncCouch", "CouchException", "NotModified",
@@ -19,6 +20,11 @@ __all__ = ["BlockingCouch", "AsyncCouch", "CouchException", "NotModified",
            "PreconditionFailed", "InternalServerError"]
 
 __version__ = '0.2.3'
+
+
+def json_encode(value):
+    """JSON-encodes the given Python object."""
+    return json.dumps(value, allow_nan=False).replace("</", "<\\/")
 
 
 class AsyncCouch(object):
