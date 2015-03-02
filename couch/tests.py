@@ -14,6 +14,7 @@ def run_blocking_tests():
     # set up tests
     doc1 = {'msg': 'Test doc 1'}
     doc2 = {'msg': 'Test doc 2'}
+    doc3 = {'value': float('nan')}
 
     db = couch.BlockingCouch(dbname1)
     db2 = couch.BlockingCouch(dbname2)
@@ -159,6 +160,15 @@ def run_blocking_tests():
     assert 'ok' in resp, 'Attachment not deleted'
     doc1['_rev'] = resp['rev']
 
+    # put invalid doc
+    try:
+        db.save_doc(doc3)
+    except ValueError:
+        pass
+    else:
+        raise AssertionError('No error on doc containing NaN')
+
+    # done testing, delete test db
     db.delete_db()
 
     print('All blocking tests passed')
@@ -170,6 +180,7 @@ def run_async_tests():
     # set up tests
     doc1 = {'msg': 'Test doc 1'}
     doc2 = {'msg': 'Test doc 2'}
+    doc3 = {'value': float('nan')}
 
     db = couch.AsyncCouch(dbname1)
     db2 = couch.AsyncCouch(dbname2)
@@ -321,6 +332,14 @@ def run_async_tests():
     resp = yield db.delete_attachment(doc1, attachment['name'])
     assert 'ok' in resp, 'Attachment not deleted'
     doc1['_rev'] = resp['rev']
+
+    # put invalid doc
+    try:
+        yield db.save_doc(doc3)
+    except ValueError:
+        pass
+    else:
+        raise AssertionError('No error on doc containing NaN')
 
     # done testing, delete test db
     yield db.delete_db()
