@@ -5,14 +5,6 @@ This module wraps the CouchDB HTTP REST API and defines a common interface
 for making blocking and non-blocking operations on a CouchDB.
 """
 
-
-__all__ = ["BlockingCouch", "AsyncCouch", "CouchException", "NotModified",
-           "BadRequest", "NotFound", "MethodNotAllowed", "Conflict",
-           "PreconditionFailed", "InternalServerError"]
-
-__version__ = '0.2.3'
-
-
 import copy
 import functools
 
@@ -20,6 +12,13 @@ import tornado.ioloop
 from tornado import httpclient, gen
 
 from tornado.escape import json_decode, json_encode, url_escape
+
+
+__all__ = ["BlockingCouch", "AsyncCouch", "CouchException", "NotModified",
+           "BadRequest", "NotFound", "MethodNotAllowed", "Conflict",
+           "PreconditionFailed", "InternalServerError"]
+
+__version__ = '0.2.3'
 
 
 class AsyncCouch(object):
