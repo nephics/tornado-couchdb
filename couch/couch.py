@@ -409,14 +409,16 @@ class AsyncCouch(object):
         # decode the JSON body and check for errors
         obj = json_decode(resp.body)
 
+        def to_code(err):
+            return {'not_found': 404, 'conflict': 409}.get(err, 400)
+
         if isinstance(obj, list):
             # check if there is an error in the list of dicts,
             # raise the first error seen
             for item in obj:
                 if 'error' in item:
                     raise relax_exception(httpclient.HTTPError(
-                        resp.code if item['error'] != 'not_found' else 404,
-                        item['reason'], resp))
+                        to_code(item['error']), item['reason'], resp))
 
         elif 'error' in obj:
             raise relax_exception(httpclient.HTTPError(
@@ -428,8 +430,7 @@ class AsyncCouch(object):
             for row in obj['rows']:
                 if 'error' in row:
                     raise relax_exception(httpclient.HTTPError(
-                        resp.code if row['error'] != 'not_found' else 404,
-                        row['error'], resp))
+                        to_code(row['error']), row['error'], resp))
         return obj
 
     def _parse_headers(self, resp):
