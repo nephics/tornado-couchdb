@@ -19,7 +19,7 @@ __all__ = ["BlockingCouch", "AsyncCouch", "CouchException", "NotModified",
            "BadRequest", "NotFound", "MethodNotAllowed", "Conflict",
            "PreconditionFailed", "InternalServerError"]
 
-__version__ = '0.2.5'
+__version__ = '0.3.0'
 
 
 def json_encode(value):
