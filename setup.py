@@ -39,8 +39,8 @@ setup(
     license="MIT License",
     url='https://bitbucket.org/nephics/tornado-couchdb',
     packages=['couch'],
-    requires=['tornado(>=3.2)'],
-    install_requires=['tornado>=3.2'],
+    requires=['tornado(>=4.2)'],
+    install_requires=['tornado>=4.2'],
     classifiers=[
         'Development Status :: 5 - Production/Stable',
         'License :: OSI Approved :: MIT License',

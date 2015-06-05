@@ -577,7 +577,7 @@ class BlockingCouch(AsyncCouch):
         possible arguments.
         """
 
-        io_loop = tornado.ioloop.IOLoop()
+        io_loop = tornado.ioloop.IOLoop(make_current=False)
         AsyncCouch.__init__(self, db_name, couch_url, io_loop=io_loop,
                             **request_args)
 
