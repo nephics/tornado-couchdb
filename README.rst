@@ -13,7 +13,7 @@ Install using ``pip``:
 
     pip install tornado-couchdb
 
-The code has been tested with Python 3.3 and 2.7.
+The code has been tested with Python 3.4 and 2.7.
 
 BlockingCouch
 -------------
